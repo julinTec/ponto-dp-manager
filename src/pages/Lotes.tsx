@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusBadge, BatchStatus } from "@/components/StatusBadge";
-import { Plus, Search, Loader2, FileStack } from "lucide-react";
+import { Plus, Search, Loader2, FileStack, FileUp } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -54,7 +54,10 @@ export default function Lotes() {
             <h1 className="text-2xl font-bold text-foreground">Lotes de folhas de ponto</h1>
             <p className="text-sm text-muted-foreground mt-1">Gerencie todos os lotes enviados</p>
           </div>
-          <Button asChild><Link to="/lotes/novo"><Plus className="h-4 w-4 mr-2" />Novo lote</Link></Button>
+          <div className="flex gap-2">
+            <Button asChild variant="outline"><Link to="/lotes/novo?modo=single"><FileUp className="h-4 w-4 mr-2" />Folha única</Link></Button>
+            <Button asChild><Link to="/lotes/novo?modo=lote"><Plus className="h-4 w-4 mr-2" />Novo lote</Link></Button>
+          </div>
         </div>
 
         <Card className="p-4 flex flex-col sm:flex-row gap-3">

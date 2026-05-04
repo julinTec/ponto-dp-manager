@@ -6,7 +6,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge, BatchStatus } from "@/components/StatusBadge";
-import { FileStack, Clock, CheckCircle2, AlertCircle, Plus, Loader2 } from "lucide-react";
+import { FileStack, Clock, CheckCircle2, AlertCircle, Plus, Loader2, FileUp } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -64,9 +64,14 @@ export default function Dashboard() {
             <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
             <p className="text-sm text-muted-foreground mt-1">Visão geral dos lotes de folhas de ponto</p>
           </div>
-          <Button asChild>
-            <Link to="/lotes/novo"><Plus className="h-4 w-4 mr-2" />Novo lote</Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button asChild variant="outline">
+              <Link to="/lotes/novo?modo=single"><FileUp className="h-4 w-4 mr-2" />Folha única</Link>
+            </Button>
+            <Button asChild>
+              <Link to="/lotes/novo?modo=lote"><Plus className="h-4 w-4 mr-2" />Novo lote</Link>
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
