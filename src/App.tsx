@@ -14,6 +14,7 @@ import Relatorios from "./pages/Relatorios";
 import Usuarios from "./pages/Usuarios";
 import Admissoes from "./pages/Admissoes";
 import AdmissaoDetalhe from "./pages/AdmissaoDetalhe";
+import Documentos from "./pages/Documentos";
 import SuperAdmin from "./pages/SuperAdmin";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -35,6 +36,7 @@ const App = () => (
           <Route path="/relatorios" element={<ProtectedRoute><Relatorios /></ProtectedRoute>} />
           <Route path="/admissoes" element={<ProtectedRoute><Admissoes /></ProtectedRoute>} />
           <Route path="/admissoes/:id" element={<ProtectedRoute><AdmissaoDetalhe /></ProtectedRoute>} />
+          <Route path="/documentos" element={<ProtectedRoute><Documentos /></ProtectedRoute>} />
           <Route path="/usuarios" element={<ProtectedRoute><Usuarios /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute><SuperAdmin /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
