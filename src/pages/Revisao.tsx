@@ -232,52 +232,61 @@ export default function Revisao() {
                   Nenhuma marcação nesta página ainda.
                 </div>
               ) : (
-                <table className="text-xs w-full">
-                  <thead className="bg-muted/50 sticky top-0 z-10">
-                    <tr>
-                      {COLS.map((c) => <th key={c.key} className={cn("text-left px-2 py-2 font-medium text-muted-foreground", c.w)}>{c.label}</th>)}
-                      <th className="text-left px-2 py-2 font-medium text-muted-foreground w-32">Status</th>
-                      <th className="text-left px-2 py-2 font-medium text-muted-foreground w-20">Conf.</th>
-                      <th className="text-left px-2 py-2 font-medium text-muted-foreground min-w-[140px]">Obs.</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {visibleEntries.map((e) => (
-                      <tr key={e.id} className={cn(e.revisado && "bg-success/5", !e.revisado && (e.confianca ?? 1) < 0.7 && "bg-destructive/5")}>
-                        {COLS.map((c) => (
-                          <td key={c.key} className="px-1 py-1">
-                            <Input
-                              type={c.type as any}
-                              value={(e[c.key] as any) ?? ""}
-                              onChange={(ev) => updateEntry(e.id, c.key, ev.target.value || null)}
-                              className="h-8 text-xs px-2"
-                            />
-                          </td>
-                        ))}
-                        <td className="px-1 py-1">
-                          <Select value={e.status} onValueChange={(v) => updateEntry(e.id, "status", v)}>
-                            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="ok">OK</SelectItem>
-                              <SelectItem value="inconsistente">Inconsistente</SelectItem>
-                              <SelectItem value="falta">Falta</SelectItem>
-                              <SelectItem value="folga">Folga</SelectItem>
-                              <SelectItem value="feriado">Feriado</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </td>
-                        <td className="px-1 py-1">
-                          <span className={cn("inline-block px-2 py-1 rounded text-[10px] font-medium", confidenceClass(e.confianca))}>
-                            {e.confianca != null ? `${Math.round(e.confianca * 100)}%` : "—"}
-                          </span>
-                        </td>
-                        <td className="px-1 py-1">
-                          <Input value={e.observacoes ?? ""} onChange={(ev) => updateEntry(e.id, "observacoes", ev.target.value || null)} className="h-8 text-xs px-2" />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="divide-y">
+                  {grouped.map((g, gi) => (
+                    <div key={gi}>
+                      <div className="bg-muted/40 px-4 py-2 sticky top-0 z-10 border-b flex items-baseline gap-3 flex-wrap">
+                        <span className="font-semibold text-sm text-foreground">{g.nome}</span>
+                        {g.cpf && <span className="text-xs text-muted-foreground">CPF: {g.cpf}</span>}
+                        {g.funcao && <span className="text-xs text-muted-foreground">· {g.funcao}</span>}
+                        <span className="ml-auto text-xs text-muted-foreground">{g.rows.length} marcação(ões)</span>
+                      </div>
+                      <table className="text-xs w-full">
+                        <thead className="bg-muted/20">
+                          <tr>
+                            {COLS.map((c) => <th key={c.key} className={cn("text-left px-2 py-1.5 font-medium text-muted-foreground", c.w)}>{c.label}</th>)}
+                            <th className="text-left px-2 py-1.5 font-medium text-muted-foreground w-32">Status</th>
+                            <th className="text-left px-2 py-1.5 font-medium text-muted-foreground w-20">Conf.</th>
+                            <th className="text-left px-2 py-1.5 font-medium text-muted-foreground min-w-[140px]">Obs.</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {g.rows.map((e) => (
+                            <tr key={e.id} className={cn(e.revisado && "bg-success/5", !e.revisado && (e.confianca ?? 1) < 0.7 && "bg-destructive/5")}>
+                              {COLS.map((c) => (
+                                <td key={c.key} className="px-1 py-1">
+                                  <Input type={c.type as any} value={(e[c.key] as any) ?? ""}
+                                    onChange={(ev) => updateEntry(e.id, c.key, ev.target.value || null)}
+                                    className="h-8 text-xs px-2" />
+                                </td>
+                              ))}
+                              <td className="px-1 py-1">
+                                <Select value={e.status} onValueChange={(v) => updateEntry(e.id, "status", v)}>
+                                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="ok">OK</SelectItem>
+                                    <SelectItem value="inconsistente">Inconsistente</SelectItem>
+                                    <SelectItem value="falta">Falta</SelectItem>
+                                    <SelectItem value="folga">Folga</SelectItem>
+                                    <SelectItem value="feriado">Feriado</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </td>
+                              <td className="px-1 py-1">
+                                <span className={cn("inline-block px-2 py-1 rounded text-[10px] font-medium", confidenceClass(e.confianca))}>
+                                  {e.confianca != null ? `${Math.round(e.confianca * 100)}%` : "—"}
+                                </span>
+                              </td>
+                              <td className="px-1 py-1">
+                                <Input value={e.observacoes ?? ""} onChange={(ev) => updateEntry(e.id, "observacoes", ev.target.value || null)} className="h-8 text-xs px-2" />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </div>
