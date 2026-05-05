@@ -1,50 +1,64 @@
+## Corrigir Relatórios + adicionar consolidado por funcionário
 
-# Adicionar upload de folha única (single)
+### Diagnóstico do problema
 
-Hoje todo upload em `/lotes/novo` exige nome de lote, mês/ano e aceita múltiplos arquivos. Vamos manter esse fluxo e adicionar um modo simplificado para enviar **apenas uma folha**, sem precisar configurar lote.
+Quando você clicou em "Gerar" em **Relatórios**, nada apareceu porque **todas as marcações no banco têm o campo `data` vazio (null)**. Confirmei isso consultando o banco: as 20 marcações mais recentes do seu lote `JORGE LUIZ ADOLFO` estão com `data = null`, embora `entrada` e `saida_final` estejam preenchidas corretamente.
 
-## Mudanças
+Causa: folhas manuscritas brasileiras geralmente mostram apenas o **dia do mês** (01, 02, 03…), sem o ano. O Gemini, sem contexto de mês/ano, prefere deixar `data` nula a inventar. O `monthly-report` então filtra por `data BETWEEN inicio AND fim` e não acha nada.
 
-### 1. Página `/lotes/novo` — adicionar abas
+### O que será feito
 
-Reformular `src/pages/NovoLote.tsx` com `Tabs` (shadcn) no topo:
+**1. Passar mês/ano de referência do lote para o OCR (`supabase/functions/ocr-page/index.ts` + `process-batch/index.ts`)**
 
-- **Aba "Folha única"** (padrão, primeira opção)
-  - Campo único: 1 arquivo (PDF ou imagem)
-  - Sem campo "nome do lote", sem mês/ano obrigatórios
-  - Ao enviar:
-    - Cria um `timesheet_batch` automaticamente com:
-      - `nome` = nome do arquivo (sem extensão), truncado a 120 chars
-      - `mes_referencia` / `ano_referencia` = mês/ano atual
-      - `status = 'enviado'`
-    - Faz upload do arquivo, cria `timesheet_files`
-    - Dispara `process-batch`
-    - Redireciona para `/lotes/:id/revisao`
-  - Validação: exatamente 1 arquivo, até 20MB, tipo PDF/imagem
-  - Drop zone simplificada com texto "Envie uma folha de ponto"
+- Ao chamar o Gemini, incluir no prompt o `mes_referencia`/`ano_referencia` do lote (ex: "as marcações são do mês 05/2026"). Isso permite ao modelo montar a data completa quando a folha mostra só o dia.
+- Após o tool call, fazer um **fallback no servidor**: se `m.data` vier como apenas dia (ex: `"05"`) ou no formato `DD/MM`, completar com o mês/ano do lote para gerar `YYYY-MM-DD` válido.
+- Se ainda assim `data` ficar nula mas houver `entrada` ou `saida_final` preenchidos, atribuir uma data sequencial dentro do mês de referência (linha 1 → dia 1, linha 2 → dia 2, etc.) — isso garante que toda marcação OCR tenha uma data utilizável.
 
-- **Aba "Lote (múltiplos arquivos)"**
-  - Mantém o formulário atual exatamente como está (nome, mês, ano, múltiplos arquivos)
+**2. Botão "Reprocessar datas" no lote existente**
 
-A lógica de upload é compartilhada via uma função interna `criarLoteEEnviar(files, meta)` para não duplicar código.
+Como você já tem um lote sem datas, vamos adicionar um botão na tela de **Revisão** chamado "Preencher datas do mês" que, baseado no mês/ano de referência do lote, distribui as marcações sem `data` em dias sequenciais (1º dia útil → primeira linha, etc.). Assim você não precisa reenviar o PDF.
 
-### 2. Atalho no Dashboard
+**3. Consolidado por funcionário direto na página de Relatórios (`src/pages/Relatorios.tsx`)**
 
-No `src/pages/Dashboard.tsx`, ao lado do botão "Novo lote" atual, adicionar botão secundário **"Enviar folha única"** que leva a `/lotes/novo?modo=single` (a página lê o query param e seleciona a aba correspondente ao montar).
+Hoje a tela já tem a estrutura certa (mês + ano + tabela). Vamos:
 
-### 3. Atalho na página `/lotes`
+- **Manter** a tabela mensal por mês/ano (como está).
+- **Adicionar** acima da tabela uma seção **"Cards de KPI"** com totais agregados:
+  - Total de funcionários ativos no período
+  - Total de horas trabalhadas
+  - Total de faltas
+  - Total de inconsistências
+- **Adicionar** ao lado do filtro de mês/ano um filtro opcional **"Lote"** (dropdown com lotes daquele mês), para permitir gerar o consolidado de **um lote específico** em vez do mês inteiro.
+- **Adicionar** uma terceira coluna na tabela: **"Dias trabalhados"** (contagem de marcações com status `ok`).
 
-Mesma adição em `src/pages/Lotes.tsx`: dois botões no header — "Folha única" (outline) e "Novo lote" (primary).
+**4. Atalho a partir da tela de Revisão**
 
-## Detalhes técnicos
+Quando o lote estiver com status `revisado`, mostrar um botão **"Ver consolidado deste lote"** que leva para `/relatorios?lote=<id>` já com o filtro pré-aplicado.
 
-- Backend não muda: a tabela `timesheet_batches` já aceita um lote contendo um único arquivo, e `process-batch` / `ocr-page` funcionam por página independentemente da quantidade. Nenhuma migration necessária.
-- `mes_referencia` e `ano_referencia` continuam preenchidos (data atual) para que relatórios mensais funcionem.
-- Tipos PT-BR mantidos em todas as mensagens e toasts.
-- Sem alterações em RLS, edge functions, storage ou schema.
+### Detalhes técnicos
 
-## Arquivos afetados
+- **Edge function `monthly-report`**: aceitar parâmetro opcional `batch_id`. Quando presente, filtra por `batch_id` em vez de só por intervalo de data — útil para lotes sem `data` populada (fallback de robustez). Mantém a agregação por funcionário igual.
+- **Edge function `ocr-page`**: receber `mes_referencia`/`ano_referencia` (ler do `timesheet_batches` que já está no JOIN) e injetar no `SYSTEM_PROMPT`. Adicionar normalização pós-OCR:
+  ```ts
+  function normalizarData(raw, mes, ano) {
+    if (!raw) return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+    const dd = raw.match(/^(\d{1,2})/)?.[1];
+    if (dd && mes && ano) return `${ano}-${String(mes).padStart(2,'0')}-${dd.padStart(2,'0')}`;
+    return null;
+  }
+  ```
+- **Botão "Preencher datas do mês"** na Revisão: roda no cliente, faz `update` em batch nas `time_entries` daquele lote onde `data IS NULL`, atribuindo dia 1, 2, 3… do mês de referência conforme a ordem de criação (`created_at`). Isso resolve seu lote atual sem refazer OCR.
+- **Relatórios**: cards de KPI calculados a partir do array `linhas` já retornado (somatórios simples). Filtro de lote: query `timesheet_batches` por mês/ano selecionado e listar no select.
 
-- `src/pages/NovoLote.tsx` — refatorar com Tabs (folha única / lote)
-- `src/pages/Dashboard.tsx` — botão extra "Folha única"
-- `src/pages/Lotes.tsx` — botão extra "Folha única"
+### Arquivos alterados
+
+- `supabase/functions/ocr-page/index.ts` — prompt com mês/ano + normalização de data.
+- `supabase/functions/process-batch/index.ts` — passar referência do lote (provavelmente já passa via JOIN; ajustar se necessário).
+- `supabase/functions/monthly-report/index.ts` — aceitar `batch_id` opcional.
+- `src/pages/Relatorios.tsx` — KPIs, filtro de lote, coluna "Dias trabalhados", suporte a query string `?lote=`.
+- `src/pages/Revisao.tsx` — botão "Preencher datas do mês" + botão "Ver consolidado" quando revisado.
+
+### Sem mudanças no banco
+
+Nenhuma migration necessária — todos os campos já existem.
