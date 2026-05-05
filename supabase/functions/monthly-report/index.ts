@@ -17,8 +17,8 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { mes, ano } = await req.json();
-    if (!mes || !ano) throw new Error("mes e ano obrigatórios");
+    const { mes, ano, batch_id } = await req.json();
+    if (!batch_id && (!mes || !ano)) throw new Error("informe batch_id OU mes+ano");
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) throw new Error("não autorizado");
@@ -29,13 +29,19 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const inicio = `${ano}-${String(mes).padStart(2, "0")}-01`;
-    const proxMes = mes === 12 ? `${ano + 1}-01-01` : `${ano}-${String(mes + 1).padStart(2, "0")}-01`;
-
-    const { data: entries, error } = await userClient
+    let query = userClient
       .from("time_entries")
-      .select("employee_id, nome_lido, data, entrada, saida_intervalo, retorno_intervalo, saida_final, status")
-      .gte("data", inicio).lt("data", proxMes);
+      .select("employee_id, nome_lido, data, entrada, saida_intervalo, retorno_intervalo, saida_final, status");
+
+    if (batch_id) {
+      query = query.eq("batch_id", batch_id);
+    } else {
+      const inicio = `${ano}-${String(mes).padStart(2, "0")}-01`;
+      const proxMes = mes === 12 ? `${ano + 1}-01-01` : `${ano}-${String(mes + 1).padStart(2, "0")}-01`;
+      query = query.gte("data", inicio).lt("data", proxMes);
+    }
+
+    const { data: entries, error } = await query;
     if (error) throw error;
 
     const { data: emps } = await userClient.from("employees").select("id, nome");
