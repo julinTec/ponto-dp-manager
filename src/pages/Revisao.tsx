@@ -21,10 +21,8 @@ interface Entry {
   confianca: number | null; revisado: boolean; _dirty?: boolean;
 }
 
+// Colunas exibidas dentro de cada grupo (sem nome/cpf/função, que vão no cabeçalho do grupo)
 const COLS: { key: keyof Entry; label: string; type?: string; w?: string }[] = [
-  { key: "nome_lido", label: "Funcionário", w: "min-w-[160px]" },
-  { key: "cpf_lido", label: "CPF", w: "w-32" },
-  { key: "funcao_lida", label: "Função", w: "w-32" },
   { key: "data", label: "Data", type: "date", w: "w-32" },
   { key: "dia_semana", label: "Dia", w: "w-20" },
   { key: "entrada", label: "Entrada", type: "time", w: "w-24" },
