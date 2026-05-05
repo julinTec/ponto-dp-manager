@@ -59,18 +59,19 @@ export default function AdmissaoDetalhe() {
     setAdmission(a);
     setDocs(d ?? []);
     if (a) {
+      const ex: any = a.dados_extraidos ?? {};
       setForm((prev: any) => ({
-        nome: prev.nome ?? a.dados_extraidos?.nome ?? "",
-        cpf: prev.cpf ?? a.dados_extraidos?.cpf ?? "",
-        rg: prev.rg ?? a.dados_extraidos?.rg ?? "",
-        data_nascimento: prev.data_nascimento ?? a.dados_extraidos?.data_nascimento ?? "",
-        endereco: prev.endereco ?? a.dados_extraidos?.endereco ?? "",
-        telefone: prev.telefone ?? a.dados_extraidos?.telefone ?? "",
-        email: prev.email ?? a.dados_extraidos?.email ?? "",
-        cargo: prev.cargo ?? a.dados_extraidos?.cargo ?? "",
-        admission_date: prev.admission_date ?? a.dados_extraidos?.admission_date ?? "",
-        salario: prev.salario ?? a.dados_extraidos?.salario ?? "",
-        jornada_padrao_horas: prev.jornada_padrao_horas ?? a.dados_extraidos?.jornada_padrao_horas ?? 8,
+        nome: prev.nome ?? ex.nome ?? "",
+        cpf: prev.cpf ?? ex.cpf ?? "",
+        rg: prev.rg ?? ex.rg ?? "",
+        data_nascimento: prev.data_nascimento ?? ex.data_nascimento ?? "",
+        endereco: prev.endereco ?? ex.endereco ?? "",
+        telefone: prev.telefone ?? ex.telefone ?? "",
+        email: prev.email ?? ex.email ?? "",
+        cargo: prev.cargo ?? ex.cargo ?? "",
+        admission_date: prev.admission_date ?? ex.admission_date ?? "",
+        salario: prev.salario ?? ex.salario ?? "",
+        jornada_padrao_horas: prev.jornada_padrao_horas ?? ex.jornada_padrao_horas ?? 8,
         work_schedule_type: prev.work_schedule_type ?? "5x2",
       }));
     }
@@ -85,7 +86,7 @@ export default function AdmissaoDetalhe() {
   }
 
   async function alterarChecklist(docId: string, status: string) {
-    await supabase.from("admission_documents").update({ checklist_status: status }).eq("id", docId);
+    await supabase.from("admission_documents").update({ checklist_status: status as any }).eq("id", docId);
     load(true);
   }
 
