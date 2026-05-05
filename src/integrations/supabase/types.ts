@@ -705,6 +705,10 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      recompute_dsr_for_employee_month: {
+        Args: { _ano: number; _employee_id: string; _mes: number }
+        Returns: number
+      }
     }
     Enums: {
       admission_doc_type:
@@ -733,6 +737,10 @@ export type Database = {
         | "declaracao"
         | "justificativa"
         | "outro"
+        | "ferias"
+        | "aviso_previo"
+        | "rescisao"
+        | "comprovante_pagamento"
       employee_status: "ativo" | "pendente_validacao" | "inativo"
       entry_status: "ok" | "inconsistente" | "falta" | "folga" | "feriado"
       ocr_status: "pendente" | "processando" | "concluido" | "falhou"
@@ -893,6 +901,10 @@ export const Constants = {
         "declaracao",
         "justificativa",
         "outro",
+        "ferias",
+        "aviso_previo",
+        "rescisao",
+        "comprovante_pagamento",
       ],
       employee_status: ["ativo", "pendente_validacao", "inativo"],
       entry_status: ["ok", "inconsistente", "falta", "folga", "feriado"],

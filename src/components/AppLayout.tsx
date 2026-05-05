@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, FileStack, Users, FileBarChart2, Shield, LogOut, Clock, UserCog, UserPlus } from "lucide-react";
+import { LayoutDashboard, FileStack, Users, FileBarChart2, Shield, LogOut, Clock, UserCog, UserPlus, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { signOut, useAuth } from "@/hooks/useAuth";
@@ -10,6 +10,7 @@ const NAV = [
   { to: "/lotes", label: "Lotes", icon: FileStack },
   { to: "/admissoes", label: "Admissões", icon: UserPlus },
   { to: "/funcionarios", label: "Funcionários", icon: Users },
+  { to: "/documentos", label: "Documentos", icon: FileText },
   { to: "/relatorios", label: "Relatórios", icon: FileBarChart2 },
 ];
 
