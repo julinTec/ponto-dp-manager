@@ -133,12 +133,10 @@ export default function NovoLote() {
   return (
     <AppLayout>
       <div className="p-8 max-w-3xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Nova folha de ponto</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Envie uma folha individual ou um lote com vários arquivos para processamento automático
-          </p>
-        </div>
+        <PageHeader
+          title="Nova folha de ponto"
+          subtitle="Envie uma folha individual ou um lote com vários arquivos para processamento automático"
+        />
 
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="grid grid-cols-2 w-full max-w-md">
