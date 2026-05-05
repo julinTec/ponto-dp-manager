@@ -127,13 +127,11 @@ export default function Funcionarios() {
   return (
     <AppLayout>
       <div className="p-8 max-w-7xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Funcionários</h1>
-            <p className="text-sm text-muted-foreground mt-1">Cadastro e validação de funcionários</p>
-          </div>
-          {canEdit && <Button onClick={() => { setEditing(null); setOpen(true); }}><Plus className="h-4 w-4 mr-2" />Novo</Button>}
-        </div>
+        <PageHeader
+          title="Funcionários"
+          subtitle="Cadastro e validação de funcionários"
+          actions={canEdit ? <Button onClick={() => { setEditing(null); setOpen(true); }}><Plus className="h-4 w-4 mr-2" />Novo</Button> : null}
+        />
 
         <Tabs defaultValue="ativos">
           <TabsList>
