@@ -150,6 +150,7 @@ Deno.serve(async (req) => {
     let confSum = 0;
     let confCount = 0;
     const entriesToInsert: any[] = [];
+    let diaSequencial = 1;
 
     for (const m of marcacoes) {
       let employeeId: string | null = null;
@@ -157,7 +158,6 @@ Deno.serve(async (req) => {
       if (cpfLimpo && byCpf.has(cpfLimpo)) employeeId = byCpf.get(cpfLimpo)!;
       else if (m.nome && byNome.has(m.nome.toLowerCase().trim())) employeeId = byNome.get(m.nome.toLowerCase().trim())!;
       else if (m.nome) {
-        // Auto-cria funcionário pendente
         const { data: novo } = await admin.from("employees").insert({
           company_id: companyId,
           nome: m.nome,
@@ -175,6 +175,15 @@ Deno.serve(async (req) => {
       const conf = typeof m.confianca === "number" ? Math.max(0, Math.min(1, m.confianca)) : 0.5;
       confSum += conf; confCount++;
 
+      // Normaliza data; se ainda nula e houver mês/ano de referência, usa dia sequencial
+      let dataFinal = normalizarData(m.data ?? null, mesRef, anoRef);
+      if (!dataFinal && mesRef && anoRef) {
+        const ultimoDia = new Date(anoRef, mesRef, 0).getDate();
+        const dia = Math.min(diaSequencial, ultimoDia);
+        dataFinal = `${anoRef}-${String(mesRef).padStart(2,"0")}-${String(dia).padStart(2,"0")}`;
+        diaSequencial++;
+      }
+
       entriesToInsert.push({
         batch_id: page.batch_id,
         page_id: page.id,
@@ -182,7 +191,7 @@ Deno.serve(async (req) => {
         nome_lido: m.nome ?? null,
         cpf_lido: m.cpf ?? null,
         funcao_lida: m.funcao ?? null,
-        data: m.data ?? null,
+        data: dataFinal,
         dia_semana: m.dia_semana ?? null,
         entrada: m.entrada ?? null,
         saida_intervalo: m.saida_intervalo ?? null,
