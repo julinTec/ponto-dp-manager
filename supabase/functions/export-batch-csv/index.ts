@@ -21,8 +21,6 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_ANON_KEY")!,
       { global: { headers: { Authorization: authHeader } } }
     );
-    const { data: claims } = await userClient.auth.getClaims(authHeader.replace("Bearer ", ""));
-    if (!claims?.claims) throw new Error("não autenticado");
 
     const { data: entries, error } = await userClient
       .from("time_entries")
@@ -47,6 +45,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
+    console.error("export-batch-csv error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "erro" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

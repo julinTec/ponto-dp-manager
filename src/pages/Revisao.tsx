@@ -7,8 +7,9 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { StatusBadge, BatchStatus } from "@/components/StatusBadge";
-import { ArrowLeft, ChevronLeft, ChevronRight, Download, Loader2, Save, CheckCircle2, RefreshCw, Calendar, BarChart3 } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Download, Loader2, Save, CheckCircle2, RefreshCw, Calendar, BarChart3, FileSpreadsheet, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -125,13 +126,34 @@ export default function Revisao() {
 
   async function exportarCSV() {
     const { data, error } = await supabase.functions.invoke("export-batch-csv", { body: { batch_id: batchId } });
-    if (error) return toast.error("Erro ao exportar");
+    if (error || data?.error) {
+      console.error("export csv", error, data);
+      return toast.error(data?.error || "Erro ao exportar CSV");
+    }
     const blob = new Blob([data.csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url; a.download = `${batch.nome.replace(/\s+/g,"_")}.csv`; a.click();
     URL.revokeObjectURL(url);
     toast.success("CSV exportado");
+    load(true);
+  }
+
+  async function exportarXLSX() {
+    const { data, error } = await supabase.functions.invoke("export-batch-xlsx", { body: { batch_id: batchId } });
+    if (error || data?.error) {
+      console.error("export xlsx", error, data);
+      return toast.error(data?.error || "Erro ao exportar XLSX");
+    }
+    const bin = atob(data.xlsx_base64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const blob = new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = data.filename || `${batch.nome.replace(/\s+/g,"_")}.xlsx`; a.click();
+    URL.revokeObjectURL(url);
+    toast.success("XLSX exportado");
     load(true);
   }
 
@@ -194,7 +216,15 @@ export default function Revisao() {
             </Button>
             <Button variant="outline" size="sm" onClick={marcarRevisado}><CheckCircle2 className="h-4 w-4 mr-1" />Marcar revisado</Button>
             <Button asChild variant="outline" size="sm"><Link to={`/relatorios?lote=${batchId}`}><BarChart3 className="h-4 w-4 mr-1" />Consolidado</Link></Button>
-            <Button size="sm" onClick={exportarCSV}><Download className="h-4 w-4 mr-1" />Exportar CSV</Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm"><Download className="h-4 w-4 mr-1" />Exportar</Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={exportarCSV}><FileText className="h-4 w-4 mr-2" />Exportar CSV</DropdownMenuItem>
+                <DropdownMenuItem onClick={exportarXLSX}><FileSpreadsheet className="h-4 w-4 mr-2" />Exportar XLSX</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 

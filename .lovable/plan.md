@@ -1,32 +1,43 @@
-## Diagnóstico (confirmado)
+## Objetivo
 
-O lote `f2eaaf63...` (e também `c4c037fa...`) tem **páginas duplicadas** em `timesheet_pages`:
+Na tela de Revisão (`/lotes/:id/revisao`), o botão **Exportar CSV** está retornando "Erro ao exportar". Corrigir o erro e adicionar uma segunda opção de exportação em **XLSX** (Excel), com formatação melhor (colunas dimensionadas, cabeçalho destacado, agrupamento por funcionário).
 
-- 1 imagem real foi enviada → mas existem **4 linhas** em `timesheet_pages`, todas com `numero_pagina = 1` e o **mesmo `image_path`**.
-- O OCR rodou em cada cópia → 30 marcações × 4 = 120 entries.
-- A barra superior mostra "3 pág · 90 marcações" (valor antigo de `total_paginas`/`total_marcacoes` salvo no batch).
-- Por isso ao clicar em "próxima página" a imagem não muda (todas apontam para o mesmo arquivo) e as marcações ao lado parecem iguais (são quase idênticas).
+## Causa raiz do erro
 
-A causa raiz está em `supabase/functions/process-batch/index.ts`: ela faz `INSERT` em `timesheet_pages` com `numero_pagina: 1` fixo e **sem apagar registros antigos**. Cada "Reprocessar" multiplica os dados.
+A edge function `export-batch-csv` usa `userClient.auth.getClaims(token)` para validar o usuário. Essa chamada está falhando silenciosamente (joga `não autenticado` → 500). As outras edge functions do projeto (`process-batch`, `monthly-report`, `delete-batch`) não fazem essa validação manual — confiam no `verify_jwt` do Supabase + RLS. A função `export-batch-csv` é a única que faz isso e é justamente a que está quebrando.
 
-## Correção
+Além disso, a função não loga erros, por isso os logs da Cloud só mostram `boot/shutdown`.
 
-### 1. Edge function `process-batch` (reescrita)
-- Antes de criar novas páginas, **apagar `time_entries` e `timesheet_pages` do lote** (idempotência).
-- Numerar páginas **sequencialmente** (`numero_pagina = 1, 2, 3, ...`), uma por arquivo, em ordem por `created_at`/`original_name`.
-- Resetar `total_marcacoes = 0` no batch (o OCR depois preenche).
+## Plano
 
-### 2. Migração SQL
-- **Limpar duplicados existentes**: para cada `(batch_id, file_id)`, manter só a página mais antiga; apagar `time_entries` órfãs.
-- **Renumerar** as páginas restantes sequencialmente dentro de cada lote.
-- **Atualizar `total_paginas` e `total_marcacoes`** em `timesheet_batches` com os valores reais.
-- **Adicionar `UNIQUE (batch_id, file_id, numero_pagina)`** em `timesheet_pages` para impedir o problema voltar.
-- **Adicionar foreign keys faltantes** com `ON DELETE CASCADE` (timesheet_pages, time_entries, timesheet_files → batch; pages → file; entries → page; entries.employee_id → employees ON DELETE SET NULL; batches → companies; employees → companies). Isso também elimina a necessidade do código manual em `delete-batch`.
+### 1. Corrigir `supabase/functions/export-batch-csv/index.ts`
+- Remover o bloco manual de `getClaims` — basta criar o `userClient` com o `Authorization` header. As policies de RLS já garantem que só dados do usuário sejam retornados.
+- Adicionar `console.error` no catch para logs futuros.
+- Manter a resposta `{ csv }` (compatível com o front atual).
 
-### 3. Sem mudanças no frontend
-A `Revisao.tsx` já está correta: filtra entries por `page_id` da página atual e renderiza a `image_path` com signed URL. Após a limpeza, ela vai mostrar 1 página com 30 marcações para esse lote.
+### 2. Criar nova edge function `export-batch-xlsx`
+- Mesmo padrão da CSV (recebe `batch_id`, usa `userClient` com Authorization).
+- Busca `time_entries` + dados do batch (nome, mês/ano).
+- Gera planilha XLSX usando `https://esm.sh/xlsx@0.18.5` (SheetJS) com:
+  - Cabeçalho do lote (nome, mês/ano) nas primeiras linhas
+  - Tabela com as mesmas colunas do CSV: Funcionário, CPF, Função, Data, Dia, Entrada, Saída intervalo, Retorno intervalo, Saída final, Status, Observações, Confiança
+  - Larguras de coluna ajustadas e cabeçalho em negrito (estilo básico)
+- Retorna `{ xlsx_base64, filename }`.
+- Marca o lote como `exportado` (igual ao CSV faz hoje).
 
-## Resultado esperado
-- Lote `f2eaaf63...`: 1 página, 30 marcações.
-- Lote `c4c037fa...`: 1 página, marcações reais sem duplicação.
-- Reprocessamentos futuros são seguros — sempre limpam antes de recriar.
+### 3. Ajustar `src/pages/Revisao.tsx`
+- Substituir o botão único **Exportar CSV** por um **DropdownMenu** com duas opções:
+  - **Exportar CSV** (chama `export-batch-csv`, comportamento atual)
+  - **Exportar XLSX** (chama `export-batch-xlsx`, decodifica base64 → Blob `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` → download `.xlsx`)
+- Tratar erros mostrando mensagem específica via `toast.error`.
+
+### 4. Verificação
+- Após deploy, testar o botão CSV (deve voltar a funcionar) e o novo XLSX (download `.xlsx` abre no Excel/LibreOffice corretamente).
+
+## Arquivos afetados
+
+- `supabase/functions/export-batch-csv/index.ts` (corrigir auth + logs)
+- `supabase/functions/export-batch-xlsx/index.ts` (novo)
+- `src/pages/Revisao.tsx` (dropdown com duas opções)
+
+Sem migrations de banco. Sem mudanças em RLS.
