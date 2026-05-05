@@ -11,6 +11,7 @@ import NovoLote from "./pages/NovoLote";
 import Revisao from "./pages/Revisao";
 import Funcionarios from "./pages/Funcionarios";
 import Relatorios from "./pages/Relatorios";
+import Usuarios from "./pages/Usuarios";
 import SuperAdmin from "./pages/SuperAdmin";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -30,6 +31,7 @@ const App = () => (
           <Route path="/lotes/:id/revisao" element={<ProtectedRoute><Revisao /></ProtectedRoute>} />
           <Route path="/funcionarios" element={<ProtectedRoute><Funcionarios /></ProtectedRoute>} />
           <Route path="/relatorios" element={<ProtectedRoute><Relatorios /></ProtectedRoute>} />
+          <Route path="/usuarios" element={<ProtectedRoute><Usuarios /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute><SuperAdmin /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
