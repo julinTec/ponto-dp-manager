@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-2.5-pro",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: buildSystemPrompt(mesRef, anoRef) },
           { role: "user", content: [
             { type: "text", text: "Extraia todas as marcações de ponto desta folha." },
             { type: "image_url", image_url: { url: dataUrl } },
