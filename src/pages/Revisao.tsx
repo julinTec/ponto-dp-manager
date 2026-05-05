@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusBadge, BatchStatus } from "@/components/StatusBadge";
-import { ArrowLeft, ChevronLeft, ChevronRight, Download, Loader2, Save, CheckCircle2, RefreshCw } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Download, Loader2, Save, CheckCircle2, RefreshCw, Calendar, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
