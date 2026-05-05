@@ -132,6 +132,26 @@ export default function Revisao() {
     load(true);
   }
 
+  async function preencherDatas() {
+    if (!batch?.mes_referencia || !batch?.ano_referencia) {
+      return toast.error("Lote sem mês/ano de referência");
+    }
+    const semData = entries.filter((e) => !e.data).sort((a, b) => a.id.localeCompare(b.id));
+    if (semData.length === 0) return toast.info("Todas as marcações já têm data");
+    const mes = batch.mes_referencia as number;
+    const ano = batch.ano_referencia as number;
+    const ultimoDia = new Date(ano, mes, 0).getDate();
+    let dia = 1;
+    for (const e of semData) {
+      const d = Math.min(dia, ultimoDia);
+      const dataStr = `${ano}-${String(mes).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+      await supabase.from("time_entries").update({ data: dataStr }).eq("id", e.id);
+      dia++;
+    }
+    toast.success(`${semData.length} datas preenchidas (${String(mes).padStart(2,"0")}/${ano})`);
+    load(true);
+  }
+
   function confidenceClass(c: number | null) {
     if (c == null) return "bg-muted text-muted-foreground";
     if (c >= 0.9) return "bg-success/15 text-success";
