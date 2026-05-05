@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
       if (!agg.has(key)) agg.set(key, {
         employee_id: e.employee_id ?? key,
         nome: nomeMap.get(e.employee_id ?? "") ?? e.nome_lido ?? "Sem nome",
-        total_horas: 0, faltas: 0, folgas: 0, feriados: 0, dias_sem_almoco: 0, inconsistencias: 0,
+        total_horas: 0, dias_trabalhados: 0, faltas: 0, folgas: 0, feriados: 0, dias_sem_almoco: 0, inconsistencias: 0,
       });
       const a = agg.get(key);
       if (e.status === "falta") a.faltas++;
@@ -69,8 +69,9 @@ Deno.serve(async (req) => {
         if (ent != null && sai != null && sai > ent) {
           let mins = sai - ent;
           if (intS != null && intR != null && intR > intS) mins -= (intR - intS);
-          else if (ent && sai) a.dias_sem_almoco++;
+          else a.dias_sem_almoco++;
           a.total_horas += mins / 60;
+          a.dias_trabalhados++;
         } else {
           a.inconsistencias++;
         }
