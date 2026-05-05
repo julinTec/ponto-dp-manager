@@ -84,6 +84,17 @@ export default function Revisao() {
     [entries, currentPage]
   );
 
+  // Agrupa entries da página por funcionário (nome_lido + cpf como chave)
+  const grouped = useMemo(() => {
+    const m = new Map<string, { nome: string; cpf: string | null; funcao: string | null; rows: Entry[] }>();
+    for (const e of visibleEntries) {
+      const key = `${(e.nome_lido ?? "Sem nome").trim().toLowerCase()}|${(e.cpf_lido ?? "").replace(/\D/g, "")}`;
+      if (!m.has(key)) m.set(key, { nome: e.nome_lido ?? "Sem nome", cpf: e.cpf_lido, funcao: e.funcao_lida, rows: [] });
+      m.get(key)!.rows.push(e);
+    }
+    return Array.from(m.values());
+  }, [visibleEntries]);
+
   function updateEntry(id: string, key: keyof Entry, value: any) {
     setEntries((prev) => prev.map((e) => e.id === id ? { ...e, [key]: value, _dirty: true } : e));
   }
