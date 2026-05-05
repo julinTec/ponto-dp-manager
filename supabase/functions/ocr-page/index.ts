@@ -6,22 +6,43 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const SYSTEM_PROMPT = `Você é um especialista em leitura de folhas de ponto manuscritas brasileiras.
+function buildSystemPrompt(mes: number | null, ano: number | null): string {
+  const ref = (mes && ano)
+    ? `\n\nIMPORTANTE: Esta folha de ponto refere-se ao mês ${String(mes).padStart(2, "0")}/${ano}. Quando a folha mostrar apenas o dia (ex: "01", "02"), monte a data completa usando esse mês e ano (formato YYYY-MM-DD). NUNCA deixe a data nula se conseguir identificar o dia.`
+    : "";
+  return `Você é um especialista em leitura de folhas de ponto manuscritas brasileiras.
 Sua tarefa é extrair TODAS as marcações de ponto da imagem/PDF anexo.
 Para cada linha da folha, identifique:
 - nome do funcionário
 - CPF (se visível)
 - função/cargo (se visível)
-- data (formato YYYY-MM-DD)
+- data (formato YYYY-MM-DD obrigatório)
 - dia da semana (seg, ter, qua, qui, sex, sab, dom)
 - hora de entrada (HH:MM, 24h)
 - saída para intervalo/almoço (HH:MM)
 - retorno do intervalo (HH:MM)
 - saída final (HH:MM)
 - status: "ok" se completo, "falta" se ausente, "folga", "feriado", ou "inconsistente"
-- confiança 0.0-1.0 indicando o quanto você tem certeza da leitura
+- confiança 0.0-1.0 indicando o quanto você tem certeza da leitura${ref}
 
-Retorne todas as linhas via tool calling. Se um campo não estiver visível, deixe null.`;
+Retorne todas as linhas via tool calling. Se um campo (exceto data) não estiver visível, deixe null.`;
+}
+
+function normalizarData(raw: string | null, mes: number | null, ano: number | null): string | null {
+  if (!raw) return null;
+  const s = String(raw).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // DD/MM/YYYY
+  let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;
+  // DD/MM
+  m = s.match(/^(\d{1,2})\/(\d{1,2})$/);
+  if (m && ano) return `${ano}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;
+  // DD apenas
+  m = s.match(/^(\d{1,2})$/);
+  if (m && mes && ano) return `${ano}-${String(mes).padStart(2,"0")}-${m[1].padStart(2,"0")}`;
+  return null;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
