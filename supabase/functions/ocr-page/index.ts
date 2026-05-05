@@ -59,9 +59,11 @@ Deno.serve(async (req) => {
     const admin = createClient(supabaseUrl, serviceKey);
     await admin.from("timesheet_pages").update({ ocr_status: "processando" }).eq("id", page_id);
 
-    const { data: page, error: pErr } = await admin.from("timesheet_pages").select("*, timesheet_batches!inner(company_id)").eq("id", page_id).single();
+    const { data: page, error: pErr } = await admin.from("timesheet_pages").select("*, timesheet_batches!inner(company_id, mes_referencia, ano_referencia)").eq("id", page_id).single();
     if (pErr) throw pErr;
     const companyId = (page as any).timesheet_batches.company_id;
+    const mesRef = (page as any).timesheet_batches.mes_referencia ?? null;
+    const anoRef = (page as any).timesheet_batches.ano_referencia ?? null;
 
     // Baixa o arquivo do storage e converte para base64 data URL
     const { data: blob, error: dErr } = await admin.storage.from("timesheets").download(page.image_path!);
