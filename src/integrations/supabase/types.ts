@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      admission_documents: {
+        Row: {
+          admission_id: string
+          checklist_status: Database["public"]["Enums"]["checklist_status"]
+          confianca: number | null
+          created_at: string
+          dados_extraidos: Json
+          erro: string | null
+          id: string
+          mime_type: string | null
+          ocr_status: Database["public"]["Enums"]["ocr_status"]
+          original_name: string | null
+          storage_path: string
+          tamanho_bytes: number | null
+          tipo: Database["public"]["Enums"]["admission_doc_type"]
+        }
+        Insert: {
+          admission_id: string
+          checklist_status?: Database["public"]["Enums"]["checklist_status"]
+          confianca?: number | null
+          created_at?: string
+          dados_extraidos?: Json
+          erro?: string | null
+          id?: string
+          mime_type?: string | null
+          ocr_status?: Database["public"]["Enums"]["ocr_status"]
+          original_name?: string | null
+          storage_path: string
+          tamanho_bytes?: number | null
+          tipo: Database["public"]["Enums"]["admission_doc_type"]
+        }
+        Update: {
+          admission_id?: string
+          checklist_status?: Database["public"]["Enums"]["checklist_status"]
+          confianca?: number | null
+          created_at?: string
+          dados_extraidos?: Json
+          erro?: string | null
+          id?: string
+          mime_type?: string | null
+          ocr_status?: Database["public"]["Enums"]["ocr_status"]
+          original_name?: string | null
+          storage_path?: string
+          tamanho_bytes?: number | null
+          tipo?: Database["public"]["Enums"]["admission_doc_type"]
+        }
+        Relationships: []
+      }
       companies: {
         Row: {
           ativo: boolean
@@ -41,39 +89,174 @@ export type Database = {
         }
         Relationships: []
       }
-      employees: {
+      employee_admissions: {
         Row: {
           company_id: string
-          cpf: string | null
           created_at: string
-          funcao: string | null
+          created_by: string | null
+          dados_extraidos: Json
+          employee_id: string | null
           id: string
-          jornada_padrao_horas: number | null
-          nome: string
-          status: Database["public"]["Enums"]["employee_status"]
+          notes: string | null
+          status: Database["public"]["Enums"]["admission_status"]
           updated_at: string
         }
         Insert: {
           company_id: string
-          cpf?: string | null
           created_at?: string
-          funcao?: string | null
+          created_by?: string | null
+          dados_extraidos?: Json
+          employee_id?: string | null
           id?: string
-          jornada_padrao_horas?: number | null
-          nome: string
-          status?: Database["public"]["Enums"]["employee_status"]
+          notes?: string | null
+          status?: Database["public"]["Enums"]["admission_status"]
           updated_at?: string
         }
         Update: {
           company_id?: string
+          created_at?: string
+          created_by?: string | null
+          dados_extraidos?: Json
+          employee_id?: string | null
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["admission_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      employee_documents: {
+        Row: {
+          ai_extracted_data: Json
+          company_id: string
+          confianca: number | null
+          created_at: string
+          created_by: string | null
+          document_date: string | null
+          document_type: Database["public"]["Enums"]["employee_doc_type"]
+          employee_id: string | null
+          end_date: string | null
+          id: string
+          mime_type: string | null
+          needs_review: boolean
+          notes: string | null
+          original_name: string | null
+          start_date: string | null
+          status: Database["public"]["Enums"]["employee_doc_status"]
+          storage_path: string
+          tamanho_bytes: number | null
+          updated_at: string
+        }
+        Insert: {
+          ai_extracted_data?: Json
+          company_id: string
+          confianca?: number | null
+          created_at?: string
+          created_by?: string | null
+          document_date?: string | null
+          document_type: Database["public"]["Enums"]["employee_doc_type"]
+          employee_id?: string | null
+          end_date?: string | null
+          id?: string
+          mime_type?: string | null
+          needs_review?: boolean
+          notes?: string | null
+          original_name?: string | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["employee_doc_status"]
+          storage_path: string
+          tamanho_bytes?: number | null
+          updated_at?: string
+        }
+        Update: {
+          ai_extracted_data?: Json
+          company_id?: string
+          confianca?: number | null
+          created_at?: string
+          created_by?: string | null
+          document_date?: string | null
+          document_type?: Database["public"]["Enums"]["employee_doc_type"]
+          employee_id?: string | null
+          end_date?: string | null
+          id?: string
+          mime_type?: string | null
+          needs_review?: boolean
+          notes?: string | null
+          original_name?: string | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["employee_doc_status"]
+          storage_path?: string
+          tamanho_bytes?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      employees: {
+        Row: {
+          admission_date: string | null
+          cargo: string | null
+          company_id: string
+          cpf: string | null
+          created_at: string
+          data_nascimento: string | null
+          email: string | null
+          endereco: string | null
+          funcao: string | null
+          id: string
+          jornada_padrao_horas: number | null
+          nome: string
+          rg: string | null
+          salario: number | null
+          status: Database["public"]["Enums"]["employee_status"]
+          telefone: string | null
+          updated_at: string
+          work_schedule_type:
+            | Database["public"]["Enums"]["work_schedule_type"]
+            | null
+        }
+        Insert: {
+          admission_date?: string | null
+          cargo?: string | null
+          company_id: string
           cpf?: string | null
           created_at?: string
+          data_nascimento?: string | null
+          email?: string | null
+          endereco?: string | null
+          funcao?: string | null
+          id?: string
+          jornada_padrao_horas?: number | null
+          nome: string
+          rg?: string | null
+          salario?: number | null
+          status?: Database["public"]["Enums"]["employee_status"]
+          telefone?: string | null
+          updated_at?: string
+          work_schedule_type?:
+            | Database["public"]["Enums"]["work_schedule_type"]
+            | null
+        }
+        Update: {
+          admission_date?: string | null
+          cargo?: string | null
+          company_id?: string
+          cpf?: string | null
+          created_at?: string
+          data_nascimento?: string | null
+          email?: string | null
+          endereco?: string | null
           funcao?: string | null
           id?: string
           jornada_padrao_horas?: number | null
           nome?: string
+          rg?: string | null
+          salario?: number | null
           status?: Database["public"]["Enums"]["employee_status"]
+          telefone?: string | null
           updated_at?: string
+          work_schedule_type?:
+            | Database["public"]["Enums"]["work_schedule_type"]
+            | null
         }
         Relationships: [
           {
@@ -84,6 +267,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payroll_adjustments: {
+        Row: {
+          batch_id: string | null
+          company_id: string
+          created_at: string
+          data: string | null
+          employee_id: string
+          id: string
+          notes: string | null
+          origem_documento_id: string | null
+          tipo: Database["public"]["Enums"]["payroll_adj_type"]
+          valor_horas: number
+          valor_monetario: number | null
+        }
+        Insert: {
+          batch_id?: string | null
+          company_id: string
+          created_at?: string
+          data?: string | null
+          employee_id: string
+          id?: string
+          notes?: string | null
+          origem_documento_id?: string | null
+          tipo: Database["public"]["Enums"]["payroll_adj_type"]
+          valor_horas?: number
+          valor_monetario?: number | null
+        }
+        Update: {
+          batch_id?: string | null
+          company_id?: string
+          created_at?: string
+          data?: string | null
+          employee_id?: string
+          id?: string
+          notes?: string | null
+          origem_documento_id?: string | null
+          tipo?: Database["public"]["Enums"]["payroll_adj_type"]
+          valor_horas?: number
+          valor_monetario?: number | null
+        }
+        Relationships: []
       }
       processing_logs: {
         Row: {
@@ -157,18 +382,26 @@ export type Database = {
       }
       time_entries: {
         Row: {
+          absence_type: string | null
           batch_id: string
           confianca: number | null
           cpf_lido: string | null
           created_at: string
           data: string | null
           dia_semana: string | null
+          dsr_discount_applicable: boolean
           employee_id: string | null
           entrada: string | null
           funcao_lida: string | null
+          has_medical_certificate: boolean
           id: string
+          is_absence: boolean
+          is_justified: boolean
+          missing_hours: number
+          night_hours: number
           nome_lido: string | null
           observacoes: string | null
+          overtime_hours: number
           page_id: string | null
           retorno_intervalo: string | null
           revisado: boolean
@@ -176,22 +409,32 @@ export type Database = {
           revisado_por: string | null
           saida_final: string | null
           saida_intervalo: string | null
+          source_document_id: string | null
           status: Database["public"]["Enums"]["entry_status"]
           updated_at: string
+          worked_hours: number
         }
         Insert: {
+          absence_type?: string | null
           batch_id: string
           confianca?: number | null
           cpf_lido?: string | null
           created_at?: string
           data?: string | null
           dia_semana?: string | null
+          dsr_discount_applicable?: boolean
           employee_id?: string | null
           entrada?: string | null
           funcao_lida?: string | null
+          has_medical_certificate?: boolean
           id?: string
+          is_absence?: boolean
+          is_justified?: boolean
+          missing_hours?: number
+          night_hours?: number
           nome_lido?: string | null
           observacoes?: string | null
+          overtime_hours?: number
           page_id?: string | null
           retorno_intervalo?: string | null
           revisado?: boolean
@@ -199,22 +442,32 @@ export type Database = {
           revisado_por?: string | null
           saida_final?: string | null
           saida_intervalo?: string | null
+          source_document_id?: string | null
           status?: Database["public"]["Enums"]["entry_status"]
           updated_at?: string
+          worked_hours?: number
         }
         Update: {
+          absence_type?: string | null
           batch_id?: string
           confianca?: number | null
           cpf_lido?: string | null
           created_at?: string
           data?: string | null
           dia_semana?: string | null
+          dsr_discount_applicable?: boolean
           employee_id?: string | null
           entrada?: string | null
           funcao_lida?: string | null
+          has_medical_certificate?: boolean
           id?: string
+          is_absence?: boolean
+          is_justified?: boolean
+          missing_hours?: number
+          night_hours?: number
           nome_lido?: string | null
           observacoes?: string | null
+          overtime_hours?: number
           page_id?: string | null
           retorno_intervalo?: string | null
           revisado?: boolean
@@ -222,8 +475,10 @@ export type Database = {
           revisado_por?: string | null
           saida_final?: string | null
           saida_intervalo?: string | null
+          source_document_id?: string | null
           status?: Database["public"]["Enums"]["entry_status"]
           updated_at?: string
+          worked_hours?: number
         }
         Relationships: [
           {
@@ -428,6 +683,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_medical_certificate: {
+        Args: {
+          _document_id?: string
+          _employee_id: string
+          _end: string
+          _start: string
+        }
+        Returns: number
+      }
       get_user_company: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
@@ -443,6 +707,16 @@ export type Database = {
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
+      admission_doc_type:
+        | "ficha"
+        | "rg"
+        | "cpf"
+        | "comprovante_residencia"
+        | "ctps"
+        | "contrato"
+        | "exame_admissional"
+        | "outro"
+      admission_status: "em_analise" | "aprovado" | "rejeitado"
       app_role: "super_admin" | "admin" | "revisor"
       batch_status:
         | "enviado"
@@ -450,9 +724,20 @@ export type Database = {
         | "aguardando_revisao"
         | "revisado"
         | "exportado"
+      checklist_status: "recebido" | "pendente" | "rejeitado" | "em_analise"
+      employee_doc_status: "pendente_revisao" | "validado" | "rejeitado"
+      employee_doc_type:
+        | "atestado"
+        | "advertencia"
+        | "suspensao"
+        | "declaracao"
+        | "justificativa"
+        | "outro"
       employee_status: "ativo" | "pendente_validacao" | "inativo"
       entry_status: "ok" | "inconsistente" | "falta" | "folga" | "feriado"
       ocr_status: "pendente" | "processando" | "concluido" | "falhou"
+      payroll_adj_type: "dsr_desconto" | "he_extra" | "outro"
+      work_schedule_type: "5x2" | "6x1" | "12x36" | "escala" | "outro"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -580,6 +865,17 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      admission_doc_type: [
+        "ficha",
+        "rg",
+        "cpf",
+        "comprovante_residencia",
+        "ctps",
+        "contrato",
+        "exame_admissional",
+        "outro",
+      ],
+      admission_status: ["em_analise", "aprovado", "rejeitado"],
       app_role: ["super_admin", "admin", "revisor"],
       batch_status: [
         "enviado",
@@ -588,9 +884,21 @@ export const Constants = {
         "revisado",
         "exportado",
       ],
+      checklist_status: ["recebido", "pendente", "rejeitado", "em_analise"],
+      employee_doc_status: ["pendente_revisao", "validado", "rejeitado"],
+      employee_doc_type: [
+        "atestado",
+        "advertencia",
+        "suspensao",
+        "declaracao",
+        "justificativa",
+        "outro",
+      ],
       employee_status: ["ativo", "pendente_validacao", "inativo"],
       entry_status: ["ok", "inconsistente", "falta", "folga", "feriado"],
       ocr_status: ["pendente", "processando", "concluido", "falhou"],
+      payroll_adj_type: ["dsr_desconto", "he_extra", "outro"],
+      work_schedule_type: ["5x2", "6x1", "12x36", "escala", "outro"],
     },
   },
 } as const
