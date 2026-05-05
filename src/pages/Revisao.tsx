@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusBadge, BatchStatus } from "@/components/StatusBadge";
-import { ArrowLeft, ChevronLeft, ChevronRight, Download, Loader2, Save, CheckCircle2, RefreshCw } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Download, Loader2, Save, CheckCircle2, RefreshCw, Calendar, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -132,6 +132,26 @@ export default function Revisao() {
     load(true);
   }
 
+  async function preencherDatas() {
+    if (!batch?.mes_referencia || !batch?.ano_referencia) {
+      return toast.error("Lote sem mês/ano de referência");
+    }
+    const semData = entries.filter((e) => !e.data).sort((a, b) => a.id.localeCompare(b.id));
+    if (semData.length === 0) return toast.info("Todas as marcações já têm data");
+    const mes = batch.mes_referencia as number;
+    const ano = batch.ano_referencia as number;
+    const ultimoDia = new Date(ano, mes, 0).getDate();
+    let dia = 1;
+    for (const e of semData) {
+      const d = Math.min(dia, ultimoDia);
+      const dataStr = `${ano}-${String(mes).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+      await supabase.from("time_entries").update({ data: dataStr }).eq("id", e.id);
+      dia++;
+    }
+    toast.success(`${semData.length} datas preenchidas (${String(mes).padStart(2,"0")}/${ano})`);
+    load(true);
+  }
+
   function confidenceClass(c: number | null) {
     if (c == null) return "bg-muted text-muted-foreground";
     if (c >= 0.9) return "bg-success/15 text-success";
@@ -156,13 +176,15 @@ export default function Revisao() {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            <Button variant="outline" size="sm" onClick={preencherDatas}><Calendar className="h-4 w-4 mr-1" />Preencher datas</Button>
             <Button variant="outline" size="sm" onClick={reprocessar}><RefreshCw className="h-4 w-4 mr-1" />Reprocessar</Button>
             <Button variant="outline" size="sm" onClick={saveAll} disabled={saving}>
               {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
               Salvar
             </Button>
             <Button variant="outline" size="sm" onClick={marcarRevisado}><CheckCircle2 className="h-4 w-4 mr-1" />Marcar revisado</Button>
+            <Button asChild variant="outline" size="sm"><Link to={`/relatorios?lote=${batchId}`}><BarChart3 className="h-4 w-4 mr-1" />Consolidado</Link></Button>
             <Button size="sm" onClick={exportarCSV}><Download className="h-4 w-4 mr-1" />Exportar CSV</Button>
           </div>
         </div>

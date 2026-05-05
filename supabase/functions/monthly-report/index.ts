@@ -17,8 +17,8 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { mes, ano } = await req.json();
-    if (!mes || !ano) throw new Error("mes e ano obrigatórios");
+    const { mes, ano, batch_id } = await req.json();
+    if (!batch_id && (!mes || !ano)) throw new Error("informe batch_id OU mes+ano");
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) throw new Error("não autorizado");
@@ -29,13 +29,19 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const inicio = `${ano}-${String(mes).padStart(2, "0")}-01`;
-    const proxMes = mes === 12 ? `${ano + 1}-01-01` : `${ano}-${String(mes + 1).padStart(2, "0")}-01`;
-
-    const { data: entries, error } = await userClient
+    let query = userClient
       .from("time_entries")
-      .select("employee_id, nome_lido, data, entrada, saida_intervalo, retorno_intervalo, saida_final, status")
-      .gte("data", inicio).lt("data", proxMes);
+      .select("employee_id, nome_lido, data, entrada, saida_intervalo, retorno_intervalo, saida_final, status");
+
+    if (batch_id) {
+      query = query.eq("batch_id", batch_id);
+    } else {
+      const inicio = `${ano}-${String(mes).padStart(2, "0")}-01`;
+      const proxMes = mes === 12 ? `${ano + 1}-01-01` : `${ano}-${String(mes + 1).padStart(2, "0")}-01`;
+      query = query.gte("data", inicio).lt("data", proxMes);
+    }
+
+    const { data: entries, error } = await query;
     if (error) throw error;
 
     const { data: emps } = await userClient.from("employees").select("id, nome");
@@ -48,7 +54,7 @@ Deno.serve(async (req) => {
       if (!agg.has(key)) agg.set(key, {
         employee_id: e.employee_id ?? key,
         nome: nomeMap.get(e.employee_id ?? "") ?? e.nome_lido ?? "Sem nome",
-        total_horas: 0, faltas: 0, folgas: 0, feriados: 0, dias_sem_almoco: 0, inconsistencias: 0,
+        total_horas: 0, dias_trabalhados: 0, faltas: 0, folgas: 0, feriados: 0, dias_sem_almoco: 0, inconsistencias: 0,
       });
       const a = agg.get(key);
       if (e.status === "falta") a.faltas++;
@@ -63,8 +69,9 @@ Deno.serve(async (req) => {
         if (ent != null && sai != null && sai > ent) {
           let mins = sai - ent;
           if (intS != null && intR != null && intR > intS) mins -= (intR - intS);
-          else if (ent && sai) a.dias_sem_almoco++;
+          else a.dias_sem_almoco++;
           a.total_horas += mins / 60;
+          a.dias_trabalhados++;
         } else {
           a.inconsistencias++;
         }
