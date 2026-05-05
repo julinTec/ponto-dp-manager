@@ -176,13 +176,15 @@ export default function Revisao() {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            <Button variant="outline" size="sm" onClick={preencherDatas}><Calendar className="h-4 w-4 mr-1" />Preencher datas</Button>
             <Button variant="outline" size="sm" onClick={reprocessar}><RefreshCw className="h-4 w-4 mr-1" />Reprocessar</Button>
             <Button variant="outline" size="sm" onClick={saveAll} disabled={saving}>
               {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
               Salvar
             </Button>
             <Button variant="outline" size="sm" onClick={marcarRevisado}><CheckCircle2 className="h-4 w-4 mr-1" />Marcar revisado</Button>
+            <Button asChild variant="outline" size="sm"><Link to={`/relatorios?lote=${batchId}`}><BarChart3 className="h-4 w-4 mr-1" />Consolidado</Link></Button>
             <Button size="sm" onClick={exportarCSV}><Download className="h-4 w-4 mr-1" />Exportar CSV</Button>
           </div>
         </div>
