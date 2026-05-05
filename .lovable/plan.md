@@ -1,31 +1,32 @@
-## Diagnóstico
+## Diagnóstico (confirmado)
 
-O toast vermelho **"Erro ao carregar documentos"** aparece porque a página `/documentos` faz:
+O lote `f2eaaf63...` (e também `c4c037fa...`) tem **páginas duplicadas** em `timesheet_pages`:
 
-```ts
-supabase.from("employee_documents").select("*, employees(id, nome, cpf)")
-```
+- 1 imagem real foi enviada → mas existem **4 linhas** em `timesheet_pages`, todas com `numero_pagina = 1` e o **mesmo `image_path`**.
+- O OCR rodou em cada cópia → 30 marcações × 4 = 120 entries.
+- A barra superior mostra "3 pág · 90 marcações" (valor antigo de `total_paginas`/`total_marcacoes` salvo no batch).
+- Por isso ao clicar em "próxima página" a imagem não muda (todas apontam para o mesmo arquivo) e as marcações ao lado parecem iguais (são quase idênticas).
 
-Mas a tabela `public.employee_documents` **não possui foreign key** ligando `employee_id` → `employees(id)`. Sem essa FK, o PostgREST não consegue resolver o embed `employees(...)` e retorna o erro `PGRST200` ("Could not find a relationship between 'employee_documents' and 'employees'"). O `catch` exibe o toast e a lista volta vazia (por isso "0 documento(s)").
-
-Verifiquei via SQL:
-- `employee_documents.employee_id` existe (uuid), mas `pg_constraint` não tem nenhuma FK na tabela.
-- O mesmo problema provavelmente afeta `admission_documents` e `payroll_adjustments`, que também referenciam `employees`/`employee_admissions` sem FK explícita.
+A causa raiz está em `supabase/functions/process-batch/index.ts`: ela faz `INSERT` em `timesheet_pages` com `numero_pagina: 1` fixo e **sem apagar registros antigos**. Cada "Reprocessar" multiplica os dados.
 
 ## Correção
 
-Migração SQL adicionando as foreign keys faltantes (com `ON DELETE` apropriado, sem mexer em dados existentes):
+### 1. Edge function `process-batch` (reescrita)
+- Antes de criar novas páginas, **apagar `time_entries` e `timesheet_pages` do lote** (idempotência).
+- Numerar páginas **sequencialmente** (`numero_pagina = 1, 2, 3, ...`), uma por arquivo, em ordem por `created_at`/`original_name`.
+- Resetar `total_marcacoes = 0` no batch (o OCR depois preenche).
 
-1. `employee_documents.employee_id` → `employees(id) ON DELETE SET NULL`
-2. `employee_documents.company_id` → `companies(id) ON DELETE CASCADE`
-3. `admission_documents.admission_id` → `employee_admissions(id) ON DELETE CASCADE` (se faltar)
-4. `payroll_adjustments.employee_id` → `employees(id) ON DELETE CASCADE` (se faltar)
+### 2. Migração SQL
+- **Limpar duplicados existentes**: para cada `(batch_id, file_id)`, manter só a página mais antiga; apagar `time_entries` órfãs.
+- **Renumerar** as páginas restantes sequencialmente dentro de cada lote.
+- **Atualizar `total_paginas` e `total_marcacoes`** em `timesheet_batches` com os valores reais.
+- **Adicionar `UNIQUE (batch_id, file_id, numero_pagina)`** em `timesheet_pages` para impedir o problema voltar.
+- **Adicionar foreign keys faltantes** com `ON DELETE CASCADE` (timesheet_pages, time_entries, timesheet_files → batch; pages → file; entries → page; entries.employee_id → employees ON DELETE SET NULL; batches → companies; employees → companies). Isso também elimina a necessidade do código manual em `delete-batch`.
 
-Antes de criar cada FK, vou conferir se já existe e se há linhas órfãs (employee_id apontando para id inexistente) — se houver, limpo com `UPDATE ... SET employee_id = NULL` para não quebrar a migração.
+### 3. Sem mudanças no frontend
+A `Revisao.tsx` já está correta: filtra entries por `page_id` da página atual e renderiza a `image_path` com signed URL. Após a limpeza, ela vai mostrar 1 página com 30 marcações para esse lote.
 
-Após aplicar, o embed `employees(id, nome, cpf)` passa a funcionar e a página `/documentos` carrega normalmente. Nenhuma alteração de código frontend é necessária.
-
-## Arquivos
-
-- Nova migração em `supabase/migrations/` adicionando as FKs.
-- Sem alterações em código TS/React.
+## Resultado esperado
+- Lote `f2eaaf63...`: 1 página, 30 marcações.
+- Lote `c4c037fa...`: 1 página, marcações reais sem duplicação.
+- Reprocessamentos futuros são seguros — sempre limpam antes de recriar.
