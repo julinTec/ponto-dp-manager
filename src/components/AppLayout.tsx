@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, FileStack, Users, FileBarChart2, Shield, LogOut, Clock } from "lucide-react";
+import { LayoutDashboard, FileStack, Users, FileBarChart2, Shield, LogOut, Clock, UserCog } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { signOut, useAuth } from "@/hooks/useAuth";
@@ -51,6 +51,20 @@ export function AppLayout({ children }: { children: ReactNode }) {
               </NavLink>
             );
           })}
+          {(isAdmin || isSuperAdmin) && (
+            <NavLink
+              to="/usuarios"
+              className={cn(
+                "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                location.pathname.startsWith("/usuarios")
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+              )}
+            >
+              <UserCog className="h-4 w-4" />
+              Usuários
+            </NavLink>
+          )}
           {isSuperAdmin && (
             <NavLink
               to="/admin"
