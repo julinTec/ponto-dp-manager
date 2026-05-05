@@ -6,7 +6,10 @@ import { AppLayout } from "@/components/AppLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge, BatchStatus } from "@/components/StatusBadge";
-import { FileStack, Clock, CheckCircle2, AlertCircle, Plus, Loader2, FileUp } from "lucide-react";
+import {
+  FileStack, Clock, CheckCircle2, AlertCircle, Plus, Loader2, FileUp,
+  Users, FileText, CalendarX, TrendingUp, AlertTriangle,
+} from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -25,6 +28,11 @@ export default function Dashboard() {
   const [counts, setCounts] = useState<Record<BatchStatus, number>>({
     enviado: 0, processando: 0, aguardando_revisao: 0, revisado: 0, exportado: 0,
   });
+  const [funcionariosCount, setFuncionariosCount] = useState(0);
+  const [docsPendentes, setDocsPendentes] = useState(0);
+  const [stats, setStats] = useState({
+    faltas_just: 0, faltas_injust: 0, he: 0, dsr: 0, inconsistencias: 0,
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -33,27 +41,69 @@ export default function Dashboard() {
   }, [profile?.company_id]);
 
   async function load() {
-    const { data } = await supabase
-      .from("timesheet_batches")
-      .select("id, nome, status, total_paginas, total_marcacoes, created_at")
-      .order("created_at", { ascending: false })
-      .limit(8);
-    const all = (data ?? []) as Batch[];
-    setBatches(all);
-    const { data: allStatus } = await supabase
-      .from("timesheet_batches")
-      .select("status");
+    setLoading(true);
+
+    // Período: mês corrente
+    const hoje = new Date();
+    const mes = hoje.getMonth() + 1;
+    const ano = hoje.getFullYear();
+    const inicio = `${ano}-${String(mes).padStart(2, "0")}-01`;
+    const fim = mes === 12 ? `${ano + 1}-01-01` : `${ano}-${String(mes + 1).padStart(2, "0")}-01`;
+
+    const [
+      { data: batchesData },
+      { data: allStatus },
+      { count: empCount },
+      { count: docsCount },
+      { data: entries },
+      { data: adjustments },
+    ] = await Promise.all([
+      supabase.from("timesheet_batches").select("id, nome, status, total_paginas, total_marcacoes, created_at").order("created_at", { ascending: false }).limit(8),
+      supabase.from("timesheet_batches").select("status"),
+      supabase.from("employees").select("id", { count: "exact", head: true }).eq("status", "ativo"),
+      supabase.from("employee_documents").select("id", { count: "exact", head: true }).eq("status", "pendente_revisao"),
+      supabase.from("time_entries").select("status, is_absence, is_justified, has_medical_certificate, overtime_hours").gte("data", inicio).lt("data", fim),
+      supabase.from("payroll_adjustments").select("tipo, valor_horas").eq("tipo", "dsr_desconto").gte("data", inicio).lt("data", fim),
+    ]);
+
+    setBatches((batchesData ?? []) as Batch[]);
+
     const c: any = { enviado: 0, processando: 0, aguardando_revisao: 0, revisado: 0, exportado: 0 };
     (allStatus ?? []).forEach((b: any) => { c[b.status] = (c[b.status] ?? 0) + 1; });
     setCounts(c);
+
+    setFuncionariosCount(empCount ?? 0);
+    setDocsPendentes(docsCount ?? 0);
+
+    let fj = 0, fi = 0, he = 0, inc = 0;
+    for (const e of entries ?? []) {
+      he += Number(e.overtime_hours ?? 0);
+      if (e.status === "inconsistente") inc++;
+      if (e.status === "falta" || e.is_absence) {
+        if (e.is_justified || e.has_medical_certificate) fj++;
+        else fi++;
+      }
+    }
+    const dsr = (adjustments ?? []).reduce((s: number, r: any) => s + Number(r.valor_horas ?? 0), 0);
+    setStats({ faltas_just: fj, faltas_injust: fi, he, dsr, inconsistencias: inc });
+
     setLoading(false);
   }
 
-  const cards = [
+  const cardsLote = [
     { label: "Aguardando revisão", value: counts.aguardando_revisao, icon: AlertCircle, color: "text-warning" },
     { label: "Processando", value: counts.processando, icon: Loader2, color: "text-info" },
     { label: "Revisados", value: counts.revisado, icon: CheckCircle2, color: "text-success" },
     { label: "Total de lotes", value: Object.values(counts).reduce((a, b) => a + b, 0), icon: FileStack, color: "text-primary" },
+  ];
+  const cardsDP = [
+    { label: "Funcionários ativos", value: funcionariosCount, icon: Users, color: "text-primary", to: "/funcionarios" },
+    { label: "Documentos pendentes", value: docsPendentes, icon: FileText, color: "text-warning", to: "/documentos" },
+    { label: "Faltas justificadas (mês)", value: stats.faltas_just, icon: CalendarX, color: "text-muted-foreground" },
+    { label: "Faltas injustificadas (mês)", value: stats.faltas_injust, icon: CalendarX, color: stats.faltas_injust > 0 ? "text-destructive" : "text-muted-foreground" },
+    { label: "Horas extras (mês)", value: `${stats.he.toFixed(1)}h`, icon: TrendingUp, color: "text-success" },
+    { label: "DSR a descontar (mês)", value: `${stats.dsr.toFixed(1)}h`, icon: TrendingUp, color: stats.dsr > 0 ? "text-warning" : "text-muted-foreground" },
+    { label: "Inconsistências (mês)", value: stats.inconsistencias, icon: AlertTriangle, color: stats.inconsistencias > 0 ? "text-warning" : "text-muted-foreground" },
   ];
 
   return (
@@ -62,7 +112,7 @@ export default function Dashboard() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-            <p className="text-sm text-muted-foreground mt-1">Visão geral dos lotes de folhas de ponto</p>
+            <p className="text-sm text-muted-foreground mt-1">Visão geral do Departamento Pessoal — mês de referência</p>
           </div>
           <div className="flex gap-2">
             <Button asChild variant="outline">
@@ -74,23 +124,49 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {cards.map((c) => {
-            const Icon = c.icon;
-            return (
-              <Card key={c.label} className="p-5">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium">{c.label}</p>
-                    <p className="text-3xl font-bold text-foreground mt-2">{c.value}</p>
+        <div>
+          <h2 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">Lotes</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {cardsLote.map((c) => {
+              const Icon = c.icon;
+              return (
+                <Card key={c.label} className="p-5">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium">{c.label}</p>
+                      <p className="text-3xl font-bold text-foreground mt-2">{c.value}</p>
+                    </div>
+                    <div className={`h-10 w-10 rounded-lg bg-muted flex items-center justify-center ${c.color}`}>
+                      <Icon className="h-5 w-5" />
+                    </div>
                   </div>
-                  <div className={`h-10 w-10 rounded-lg bg-muted flex items-center justify-center ${c.color}`}>
-                    <Icon className="h-5 w-5" />
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
+          <h2 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">Departamento Pessoal</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {cardsDP.map((c) => {
+              const Icon = c.icon;
+              const inner = (
+                <Card className="p-5 h-full hover:bg-muted/30 transition-colors">
+                  <div className="flex items-start justify-between">
+                    <div className="min-w-0">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium">{c.label}</p>
+                      <p className="text-2xl font-bold text-foreground mt-2 tabular-nums">{c.value}</p>
+                    </div>
+                    <div className={`h-10 w-10 rounded-lg bg-muted flex items-center justify-center ${c.color}`}>
+                      <Icon className="h-5 w-5" />
+                    </div>
                   </div>
-                </div>
-              </Card>
-            );
-          })}
+                </Card>
+              );
+              return c.to ? <Link key={c.label} to={c.to}>{inner}</Link> : <div key={c.label}>{inner}</div>;
+            })}
+          </div>
         </div>
 
         <Card className="overflow-hidden">
@@ -99,9 +175,7 @@ export default function Dashboard() {
             <Button asChild variant="ghost" size="sm"><Link to="/lotes">Ver todos</Link></Button>
           </div>
           {loading ? (
-            <div className="p-12 text-center text-muted-foreground">
-              <Loader2 className="h-5 w-5 animate-spin mx-auto" />
-            </div>
+            <div className="p-12 text-center text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></div>
           ) : batches.length === 0 ? (
             <div className="p-12 text-center">
               <FileStack className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
