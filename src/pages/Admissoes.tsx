@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, UserPlus, FileText, Loader2, Upload, X } from "lucide-react";
+import { CompanyFilter, CompanyPicker } from "@/components/CompanyFilter";
 import { toast } from "sonner";
 import { ConfidenceBadge } from "@/components/ConfidenceBadge";
 import { format } from "date-fns";
