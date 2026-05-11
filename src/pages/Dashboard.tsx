@@ -139,7 +139,8 @@ export default function Dashboard() {
             <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
             <p className="text-sm text-muted-foreground mt-1">Visão geral do Departamento Pessoal — mês de referência</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            <CompanyFilter value={companyFilter} onChange={setCompanyFilter} />
             <Button asChild variant="outline">
               <Link to="/lotes/novo?modo=single"><FileUp className="h-4 w-4 mr-2" />Folha única</Link>
             </Button>
