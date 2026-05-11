@@ -137,7 +137,12 @@ export default function Funcionarios() {
         <PageHeader
           title="Funcionários"
           subtitle="Cadastro e validação de funcionários"
-          actions={canEdit ? <Button onClick={() => { setEditing(null); setOpen(true); }}><Plus className="h-4 w-4 mr-2" />Novo</Button> : null}
+          actions={
+            <div className="flex items-center gap-2">
+              <CompanyFilter value={companyFilter} onChange={setCompanyFilter} />
+              {canEdit && <Button onClick={() => { setEditing(null); setCreateCompanyId(null); setOpen(true); }}><Plus className="h-4 w-4 mr-2" />Novo</Button>}
+            </div>
+          }
         />
 
         <Tabs defaultValue="ativos">
