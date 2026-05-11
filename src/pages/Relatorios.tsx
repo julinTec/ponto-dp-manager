@@ -45,18 +45,21 @@ export default function Relatorios() {
   const [loading, setLoading] = useState(false);
   const [linhas, setLinhas] = useState<Linha[]>([]);
   const [autoRan, setAutoRan] = useState(false);
+  const [companyFilter, setCompanyFilter] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
+      let q = supabase
         .from("timesheet_batches")
         .select("id, nome, mes_referencia, ano_referencia")
         .eq("mes_referencia", parseInt(mes))
         .eq("ano_referencia", parseInt(ano))
         .order("created_at", { ascending: false });
+      if (companyFilter) q = q.eq("company_id", companyFilter);
+      const { data } = await q;
       setLotes((data ?? []) as BatchOpt[]);
     })();
-  }, [mes, ano]);
+  }, [mes, ano, companyFilter]);
 
   useEffect(() => {
     if (!loteParam || autoRan) return;
