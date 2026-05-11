@@ -46,12 +46,16 @@ export default function Admissoes() {
   const [open, setOpen] = useState(false);
   const [files, setFiles] = useState<{ file: File; tipo: string }[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [companyFilter, setCompanyFilter] = useState<string | null>(null);
+  const [createCompanyId, setCreateCompanyId] = useState<string | null>(null);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [companyFilter]);
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase.from("employee_admissions").select("*").order("created_at", { ascending: false });
+    let q = supabase.from("employee_admissions").select("*").order("created_at", { ascending: false });
+    if (companyFilter) q = q.eq("company_id", companyFilter);
+    const { data } = await q;
     setList((data ?? []) as Admission[]);
     setLoading(false);
   }
@@ -63,18 +67,19 @@ export default function Admissoes() {
   }
 
   async function criar() {
-    if (!profile?.company_id) return toast.error("Empresa não encontrada");
+    const company_id = isSuperAdmin ? createCompanyId : profile?.company_id;
+    if (!company_id) return toast.error("Selecione a empresa");
     if (files.length === 0) return toast.error("Adicione ao menos um documento");
     setSubmitting(true);
     try {
       const { data: adm, error } = await supabase
         .from("employee_admissions")
-        .insert({ company_id: profile.company_id, created_by: profile.id, status: "em_analise" })
+        .insert({ company_id, created_by: profile?.id, status: "em_analise" })
         .select().single();
       if (error) throw error;
 
       for (const item of files) {
-        const path = `${profile.company_id}/admissions/${adm.id}/${crypto.randomUUID()}-${item.file.name}`;
+        const path = `${company_id}/admissions/${adm.id}/${crypto.randomUUID()}-${item.file.name}`;
         const { error: upErr } = await supabase.storage.from("employee-docs").upload(path, item.file, { contentType: item.file.type });
         if (upErr) throw upErr;
         const { data: docRow, error: insErr } = await supabase.from("admission_documents").insert({
