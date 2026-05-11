@@ -129,6 +129,7 @@ export default function Relatorios() {
         <PageHeader
           title="Relatórios mensais"
           subtitle="Consolidado por funcionário: horas, HE, adicional noturno, faltas, DSR e inconsistências"
+          actions={<CompanyFilter value={companyFilter} onChange={setCompanyFilter} />}
         />
 
         <Card className="p-4 flex flex-col sm:flex-row gap-3 items-end flex-wrap">
