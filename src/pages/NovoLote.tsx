@@ -21,11 +21,12 @@ function isValid(f: File) {
 }
 
 export default function NovoLote() {
-  const { profile } = useAuth();
+  const { profile, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const initialTab = params.get("modo") === "lote" ? "lote" : "single";
   const [tab, setTab] = useState<string>(initialTab);
+  const [companyId, setCompanyId] = useState<string | null>(null);
 
   useEffect(() => { setTab(initialTab); }, [initialTab]);
 
