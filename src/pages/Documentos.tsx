@@ -221,10 +221,11 @@ export default function Documentos() {
                 {TIPOS.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
               </SelectContent>
             </Select>
+            <CompanyFilter value={companyFilter} onChange={setCompanyFilter} />
             <span className="text-sm text-muted-foreground">{filtered.length} documento(s)</span>
           </div>
           {canEdit && (
-            <Button onClick={() => setOpen(true)}><Upload className="h-4 w-4 mr-2" />Enviar documentos</Button>
+            <Button onClick={() => { setCreateCompanyId(null); setOpen(true); }}><Upload className="h-4 w-4 mr-2" />Enviar documentos</Button>
           )}
         </div>
 
