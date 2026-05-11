@@ -158,6 +158,12 @@ export default function Funcionarios() {
           <DialogContent>
             <DialogHeader><DialogTitle>{editing ? "Editar funcionário" : "Novo funcionário"}</DialogTitle></DialogHeader>
             <form onSubmit={save} className="space-y-4">
+              {!editing && isSuperAdmin && (
+                <div className="space-y-2">
+                  <Label>Empresa</Label>
+                  <CompanyPicker value={createCompanyId} onChange={setCreateCompanyId} />
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="nome">Nome</Label>
                 <Input id="nome" name="nome" defaultValue={editing?.nome} required maxLength={150} />
