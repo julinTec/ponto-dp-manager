@@ -99,19 +99,21 @@ export default function Documentos() {
   }
 
   async function handleUpload() {
-    if (!profile?.company_id || files.length === 0) return;
+    const company_id = isSuperAdmin ? createCompanyId : profile?.company_id;
+    if (!company_id) { toast.error("Selecione a empresa"); return; }
+    if (files.length === 0) return;
     setSubmitting(true);
     try {
       for (const item of files) {
         const ext = item.file.name.split(".").pop() ?? "bin";
-        const path = `${profile.company_id}/docs/${crypto.randomUUID()}.${ext}`;
+        const path = `${company_id}/docs/${crypto.randomUUID()}.${ext}`;
         const { error: upErr } = await supabase.storage.from("employee-docs").upload(path, item.file, {
           contentType: item.file.type, upsert: false,
         });
         if (upErr) throw upErr;
 
         const { data: doc, error: insErr } = await supabase.from("employee_documents").insert({
-          company_id: profile.company_id,
+          company_id,
           employee_id: item.employee_id ?? null,
           document_type: item.tipo as any,
           storage_path: path,
