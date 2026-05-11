@@ -294,6 +294,12 @@ export default function Documentos() {
         <DialogContent className="max-w-2xl">
           <DialogHeader><DialogTitle>Enviar documentos trabalhistas</DialogTitle></DialogHeader>
           <div className="space-y-3">
+            {isSuperAdmin && (
+              <div className="space-y-2">
+                <Label>Empresa</Label>
+                <CompanyPicker value={createCompanyId} onChange={setCreateCompanyId} />
+              </div>
+            )}
             <Label>Selecione um ou mais arquivos</Label>
             <Input type="file" multiple accept="image/*,.pdf" onChange={e => pickFiles(e.target.files)} />
             {files.length > 0 && (
