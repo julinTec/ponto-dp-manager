@@ -67,22 +67,28 @@ export default function Documentos() {
   const [submitting, setSubmitting] = useState(false);
   const [filter, setFilter] = useState<string>("todos");
   const [editing, setEditing] = useState<Doc | null>(null);
+  const [companyFilter, setCompanyFilter] = useState<string | null>(null);
+  const [createCompanyId, setCreateCompanyId] = useState<string | null>(null);
 
-  useEffect(() => { load(); loadEmployees(); }, []);
+  useEffect(() => { load(); loadEmployees(); }, [companyFilter]);
 
   async function load() {
     setLoading(true);
-    const { data, error } = await supabase
+    let q = supabase
       .from("employee_documents")
       .select("*, employees(id, nome, cpf)")
       .order("created_at", { ascending: false });
+    if (companyFilter) q = q.eq("company_id", companyFilter);
+    const { data, error } = await q;
     if (error) toast.error("Erro ao carregar documentos");
     setDocs((data ?? []) as any);
     setLoading(false);
   }
 
   async function loadEmployees() {
-    const { data } = await supabase.from("employees").select("id, nome, cpf").eq("status", "ativo").order("nome");
+    let q = supabase.from("employees").select("id, nome, cpf").eq("status", "ativo").order("nome");
+    if (companyFilter) q = q.eq("company_id", companyFilter);
+    const { data } = await q;
     setEmployees(data ?? []);
   }
 
