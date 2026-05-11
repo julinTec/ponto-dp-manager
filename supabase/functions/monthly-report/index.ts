@@ -10,7 +10,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { mes, ano, batch_id } = await req.json();
+    const { mes, ano, batch_id, company_id } = await req.json();
     if (!batch_id && (!mes || !ano)) throw new Error("informe batch_id OU mes+ano");
 
     const authHeader = req.headers.get("Authorization");
