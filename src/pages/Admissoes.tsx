@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, UserPlus, FileText, Loader2, Upload, X } from "lucide-react";
+import { CompanyFilter, CompanyPicker } from "@/components/CompanyFilter";
 import { toast } from "sonner";
 import { ConfidenceBadge } from "@/components/ConfidenceBadge";
 import { format } from "date-fns";
@@ -45,12 +46,16 @@ export default function Admissoes() {
   const [open, setOpen] = useState(false);
   const [files, setFiles] = useState<{ file: File; tipo: string }[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [companyFilter, setCompanyFilter] = useState<string | null>(null);
+  const [createCompanyId, setCreateCompanyId] = useState<string | null>(null);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [companyFilter]);
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase.from("employee_admissions").select("*").order("created_at", { ascending: false });
+    let q = supabase.from("employee_admissions").select("*").order("created_at", { ascending: false });
+    if (companyFilter) q = q.eq("company_id", companyFilter);
+    const { data } = await q;
     setList((data ?? []) as Admission[]);
     setLoading(false);
   }
@@ -62,18 +67,19 @@ export default function Admissoes() {
   }
 
   async function criar() {
-    if (!profile?.company_id) return toast.error("Empresa não encontrada");
+    const company_id = isSuperAdmin ? createCompanyId : profile?.company_id;
+    if (!company_id) return toast.error("Selecione a empresa");
     if (files.length === 0) return toast.error("Adicione ao menos um documento");
     setSubmitting(true);
     try {
       const { data: adm, error } = await supabase
         .from("employee_admissions")
-        .insert({ company_id: profile.company_id, created_by: profile.id, status: "em_analise" })
+        .insert({ company_id, created_by: profile?.id, status: "em_analise" })
         .select().single();
       if (error) throw error;
 
       for (const item of files) {
-        const path = `${profile.company_id}/admissions/${adm.id}/${crypto.randomUUID()}-${item.file.name}`;
+        const path = `${company_id}/admissions/${adm.id}/${crypto.randomUUID()}-${item.file.name}`;
         const { error: upErr } = await supabase.storage.from("employee-docs").upload(path, item.file, { contentType: item.file.type });
         if (upErr) throw upErr;
         const { data: docRow, error: insErr } = await supabase.from("admission_documents").insert({
@@ -107,7 +113,12 @@ export default function Admissoes() {
         <PageHeader
           title="Admissão de Funcionários"
           subtitle="Envio de documentos com leitura automática para cadastro do funcionário"
-          actions={canEdit && <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-2" />Nova admissão</Button>}
+          actions={
+            <div className="flex items-center gap-2">
+              <CompanyFilter value={companyFilter} onChange={setCompanyFilter} />
+              {canEdit && <Button onClick={() => { setCreateCompanyId(null); setOpen(true); }}><Plus className="h-4 w-4 mr-2" />Nova admissão</Button>}
+            </div>
+          }
         />
 
         <Card className="overflow-hidden">
@@ -148,6 +159,12 @@ export default function Admissoes() {
           <DialogContent className="max-w-2xl">
             <DialogHeader><DialogTitle>Nova admissão</DialogTitle></DialogHeader>
             <div className="space-y-4">
+              {isSuperAdmin && (
+                <div className="space-y-2">
+                  <Label>Empresa</Label>
+                  <CompanyPicker value={createCompanyId} onChange={setCreateCompanyId} />
+                </div>
+              )}
               <Label>Documentos</Label>
               <label htmlFor="adm-files" className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-lg py-8 cursor-pointer hover:border-primary hover:bg-accent/30 transition-colors"
                 onDragOver={(e) => e.preventDefault()}

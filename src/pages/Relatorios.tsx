@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Download, FileBarChart2, Users, Clock, AlertTriangle, CalendarX, Moon, TrendingUp } from "lucide-react";
+import { CompanyFilter } from "@/components/CompanyFilter";
 import { toast } from "sonner";
 
 const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
@@ -44,18 +45,21 @@ export default function Relatorios() {
   const [loading, setLoading] = useState(false);
   const [linhas, setLinhas] = useState<Linha[]>([]);
   const [autoRan, setAutoRan] = useState(false);
+  const [companyFilter, setCompanyFilter] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
+      let q = supabase
         .from("timesheet_batches")
         .select("id, nome, mes_referencia, ano_referencia")
         .eq("mes_referencia", parseInt(mes))
         .eq("ano_referencia", parseInt(ano))
         .order("created_at", { ascending: false });
+      if (companyFilter) q = q.eq("company_id", companyFilter);
+      const { data } = await q;
       setLotes((data ?? []) as BatchOpt[]);
     })();
-  }, [mes, ano]);
+  }, [mes, ano, companyFilter]);
 
   useEffect(() => {
     if (!loteParam || autoRan) return;
@@ -77,6 +81,7 @@ export default function Relatorios() {
     setLoading(true);
     const useLote = forceLote ?? (loteId !== "todos" ? loteId : undefined);
     const body: any = useLote ? { batch_id: useLote } : { mes: parseInt(mes), ano: parseInt(ano) };
+    if (companyFilter && !useLote) body.company_id = companyFilter;
     const { data, error } = await supabase.functions.invoke("monthly-report", { body });
     setLoading(false);
     if (error) { console.error(error); return toast.error("Erro ao gerar relatório"); }
@@ -124,6 +129,7 @@ export default function Relatorios() {
         <PageHeader
           title="Relatórios mensais"
           subtitle="Consolidado por funcionário: horas, HE, adicional noturno, faltas, DSR e inconsistências"
+          actions={<CompanyFilter value={companyFilter} onChange={setCompanyFilter} />}
         />
 
         <Card className="p-4 flex flex-col sm:flex-row gap-3 items-end flex-wrap">

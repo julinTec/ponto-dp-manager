@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Loader2, Users as UsersIcon, CheckCircle2, Trash2 } from "lucide-react";
+import { CompanyFilter, CompanyPicker } from "@/components/CompanyFilter";
 import { toast } from "sonner";
 
 interface Employee {
@@ -26,12 +27,16 @@ export default function Funcionarios() {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Employee | null>(null);
+  const [companyFilter, setCompanyFilter] = useState<string | null>(null);
+  const [createCompanyId, setCreateCompanyId] = useState<string | null>(null);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [companyFilter]);
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase.from("employees").select("*").order("nome");
+    let q = supabase.from("employees").select("*").order("nome");
+    if (companyFilter) q = q.eq("company_id", companyFilter);
+    const { data } = await q;
     setList((data ?? []) as Employee[]);
     setLoading(false);
   }
@@ -51,11 +56,13 @@ export default function Funcionarios() {
       const { error } = await supabase.from("employees").update(payload).eq("id", editing.id);
       if (error) return toast.error(error.message);
     } else {
-      const { error } = await supabase.from("employees").insert({ ...payload, company_id: profile!.company_id! });
+      const company_id = isSuperAdmin ? createCompanyId : profile?.company_id;
+      if (!company_id) return toast.error("Selecione a empresa");
+      const { error } = await supabase.from("employees").insert({ ...payload, company_id });
       if (error) return toast.error(error.message);
     }
     toast.success("Funcionário salvo");
-    setOpen(false); setEditing(null); load();
+    setOpen(false); setEditing(null); setCreateCompanyId(null); load();
   }
 
   async function validar(emp: Employee) {
@@ -130,7 +137,12 @@ export default function Funcionarios() {
         <PageHeader
           title="Funcionários"
           subtitle="Cadastro e validação de funcionários"
-          actions={canEdit ? <Button onClick={() => { setEditing(null); setOpen(true); }}><Plus className="h-4 w-4 mr-2" />Novo</Button> : null}
+          actions={
+            <div className="flex items-center gap-2">
+              <CompanyFilter value={companyFilter} onChange={setCompanyFilter} />
+              {canEdit && <Button onClick={() => { setEditing(null); setCreateCompanyId(null); setOpen(true); }}><Plus className="h-4 w-4 mr-2" />Novo</Button>}
+            </div>
+          }
         />
 
         <Tabs defaultValue="ativos">
@@ -146,6 +158,12 @@ export default function Funcionarios() {
           <DialogContent>
             <DialogHeader><DialogTitle>{editing ? "Editar funcionário" : "Novo funcionário"}</DialogTitle></DialogHeader>
             <form onSubmit={save} className="space-y-4">
+              {!editing && isSuperAdmin && (
+                <div className="space-y-2">
+                  <Label>Empresa</Label>
+                  <CompanyPicker value={createCompanyId} onChange={setCreateCompanyId} />
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="nome">Nome</Label>
                 <Input id="nome" name="nome" defaultValue={editing?.nome} required maxLength={150} />

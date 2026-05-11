@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ConfidenceBadge } from "@/components/ConfidenceBadge";
 import { FileText, Loader2, Upload, X, CheckCircle2, AlertTriangle, Trash2, Download } from "lucide-react";
+import { CompanyFilter, CompanyPicker } from "@/components/CompanyFilter";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -66,22 +67,28 @@ export default function Documentos() {
   const [submitting, setSubmitting] = useState(false);
   const [filter, setFilter] = useState<string>("todos");
   const [editing, setEditing] = useState<Doc | null>(null);
+  const [companyFilter, setCompanyFilter] = useState<string | null>(null);
+  const [createCompanyId, setCreateCompanyId] = useState<string | null>(null);
 
-  useEffect(() => { load(); loadEmployees(); }, []);
+  useEffect(() => { load(); loadEmployees(); }, [companyFilter]);
 
   async function load() {
     setLoading(true);
-    const { data, error } = await supabase
+    let q = supabase
       .from("employee_documents")
       .select("*, employees(id, nome, cpf)")
       .order("created_at", { ascending: false });
+    if (companyFilter) q = q.eq("company_id", companyFilter);
+    const { data, error } = await q;
     if (error) toast.error("Erro ao carregar documentos");
     setDocs((data ?? []) as any);
     setLoading(false);
   }
 
   async function loadEmployees() {
-    const { data } = await supabase.from("employees").select("id, nome, cpf").eq("status", "ativo").order("nome");
+    let q = supabase.from("employees").select("id, nome, cpf").eq("status", "ativo").order("nome");
+    if (companyFilter) q = q.eq("company_id", companyFilter);
+    const { data } = await q;
     setEmployees(data ?? []);
   }
 
@@ -92,19 +99,21 @@ export default function Documentos() {
   }
 
   async function handleUpload() {
-    if (!profile?.company_id || files.length === 0) return;
+    const company_id = isSuperAdmin ? createCompanyId : profile?.company_id;
+    if (!company_id) { toast.error("Selecione a empresa"); return; }
+    if (files.length === 0) return;
     setSubmitting(true);
     try {
       for (const item of files) {
         const ext = item.file.name.split(".").pop() ?? "bin";
-        const path = `${profile.company_id}/docs/${crypto.randomUUID()}.${ext}`;
+        const path = `${company_id}/docs/${crypto.randomUUID()}.${ext}`;
         const { error: upErr } = await supabase.storage.from("employee-docs").upload(path, item.file, {
           contentType: item.file.type, upsert: false,
         });
         if (upErr) throw upErr;
 
         const { data: doc, error: insErr } = await supabase.from("employee_documents").insert({
-          company_id: profile.company_id,
+          company_id,
           employee_id: item.employee_id ?? null,
           document_type: item.tipo as any,
           storage_path: path,
@@ -212,10 +221,11 @@ export default function Documentos() {
                 {TIPOS.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
               </SelectContent>
             </Select>
+            <CompanyFilter value={companyFilter} onChange={setCompanyFilter} />
             <span className="text-sm text-muted-foreground">{filtered.length} documento(s)</span>
           </div>
           {canEdit && (
-            <Button onClick={() => setOpen(true)}><Upload className="h-4 w-4 mr-2" />Enviar documentos</Button>
+            <Button onClick={() => { setCreateCompanyId(null); setOpen(true); }}><Upload className="h-4 w-4 mr-2" />Enviar documentos</Button>
           )}
         </div>
 
@@ -284,6 +294,12 @@ export default function Documentos() {
         <DialogContent className="max-w-2xl">
           <DialogHeader><DialogTitle>Enviar documentos trabalhistas</DialogTitle></DialogHeader>
           <div className="space-y-3">
+            {isSuperAdmin && (
+              <div className="space-y-2">
+                <Label>Empresa</Label>
+                <CompanyPicker value={createCompanyId} onChange={setCreateCompanyId} />
+              </div>
+            )}
             <Label>Selecione um ou mais arquivos</Label>
             <Input type="file" multiple accept="image/*,.pdf" onChange={e => pickFiles(e.target.files)} />
             {files.length > 0 && (

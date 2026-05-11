@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Upload, Loader2, FileText, X, FileUp, FileStack } from "lucide-react";
+import { CompanyPicker } from "@/components/CompanyFilter";
 import { toast } from "sonner";
 
 const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
@@ -20,11 +21,12 @@ function isValid(f: File) {
 }
 
 export default function NovoLote() {
-  const { profile } = useAuth();
+  const { profile, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const initialTab = params.get("modo") === "lote" ? "lote" : "single";
   const [tab, setTab] = useState<string>(initialTab);
+  const [companyId, setCompanyId] = useState<string | null>(null);
 
   useEffect(() => { setTab(initialTab); }, [initialTab]);
 
@@ -41,12 +43,13 @@ export default function NovoLote() {
 
   // ---------- Lógica compartilhada ----------
   async function criarLoteEEnviar(arquivos: File[], meta: { nome: string; mes: number; ano: number }) {
-    if (!profile?.company_id) throw new Error("Empresa não encontrada");
+    const company_id = isSuperAdmin ? companyId : profile?.company_id;
+    if (!company_id) throw new Error("Selecione a empresa");
     const { data: batch, error: bErr } = await supabase
       .from("timesheet_batches")
       .insert({
-        company_id: profile.company_id,
-        criado_por: profile.id,
+        company_id,
+        criado_por: profile?.id,
         nome: meta.nome,
         mes_referencia: meta.mes,
         ano_referencia: meta.ano,
@@ -57,7 +60,7 @@ export default function NovoLote() {
     if (bErr) throw bErr;
 
     for (const file of arquivos) {
-      const path = `${profile.company_id}/${batch.id}/${crypto.randomUUID()}-${file.name}`;
+      const path = `${company_id}/${batch.id}/${crypto.randomUUID()}-${file.name}`;
       const { error: upErr } = await supabase.storage.from("timesheets").upload(path, file, { contentType: file.type });
       if (upErr) throw upErr;
       const { error: fErr } = await supabase.from("timesheet_files").insert({
@@ -137,6 +140,14 @@ export default function NovoLote() {
           title="Nova folha de ponto"
           subtitle="Envie uma folha individual ou um lote com vários arquivos para processamento automático"
         />
+
+        {isSuperAdmin && (
+          <Card className="p-4 space-y-2">
+            <Label>Empresa do lote</Label>
+            <CompanyPicker value={companyId} onChange={setCompanyId} className="w-full max-w-md" />
+            <p className="text-xs text-muted-foreground">Os funcionários e marcações deste lote serão registrados nesta empresa.</p>
+          </Card>
+        )}
 
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="grid grid-cols-2 w-full max-w-md">
