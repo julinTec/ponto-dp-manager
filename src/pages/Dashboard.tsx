@@ -10,6 +10,7 @@ import {
   FileStack, Clock, CheckCircle2, AlertCircle, Plus, Loader2, FileUp,
   Users, FileText, CalendarX, TrendingUp, AlertTriangle,
 } from "lucide-react";
+import { CompanyFilter } from "@/components/CompanyFilter";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
