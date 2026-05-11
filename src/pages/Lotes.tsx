@@ -40,12 +40,15 @@ export default function Lotes() {
   const [statusFilter, setStatusFilter] = useState<string>("todos");
   const [confirmDel, setConfirmDel] = useState<Batch | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [companyFilter, setCompanyFilter] = useState<string | null>(null);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [companyFilter]);
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase.from("timesheet_batches").select("*").order("created_at", { ascending: false });
+    let q = supabase.from("timesheet_batches").select("*").order("created_at", { ascending: false });
+    if (companyFilter) q = q.eq("company_id", companyFilter);
+    const { data } = await q;
     setBatches((data ?? []) as Batch[]);
     setLoading(false);
   }
