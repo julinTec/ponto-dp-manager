@@ -24,7 +24,7 @@ interface Batch {
 }
 
 export default function Dashboard() {
-  const { profile } = useAuth();
+  const { profile, isSuperAdmin } = useAuth();
   const [batches, setBatches] = useState<Batch[]>([]);
   const [counts, setCounts] = useState<Record<BatchStatus, number>>({
     enviado: 0, processando: 0, aguardando_revisao: 0, revisado: 0, exportado: 0,
@@ -35,11 +35,12 @@ export default function Dashboard() {
     faltas_just: 0, faltas_injust: 0, he: 0, dsr: 0, inconsistencias: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [companyFilter, setCompanyFilter] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!profile?.company_id) return;
+    if (!profile?.company_id && !isSuperAdmin) return;
     load();
-  }, [profile?.company_id]);
+  }, [profile?.company_id, isSuperAdmin, companyFilter]);
 
   async function load() {
     setLoading(true);
@@ -51,6 +52,29 @@ export default function Dashboard() {
     const inicio = `${ano}-${String(mes).padStart(2, "0")}-01`;
     const fim = mes === 12 ? `${ano + 1}-01-01` : `${ano}-${String(mes + 1).padStart(2, "0")}-01`;
 
+    const filterCompany = <T extends { eq: (col: string, val: any) => T }>(q: T) =>
+      companyFilter ? q.eq("company_id", companyFilter) : q;
+
+    // batch_ids do filtro de empresa (para filtrar time_entries via batch)
+    let batchIdsForEntries: string[] | null = null;
+    if (companyFilter) {
+      const { data: bs } = await supabase
+        .from("timesheet_batches").select("id").eq("company_id", companyFilter);
+      batchIdsForEntries = (bs ?? []).map((b: any) => b.id);
+    }
+
+    let entriesQ = supabase
+      .from("time_entries")
+      .select("status, is_absence, is_justified, has_medical_certificate, overtime_hours")
+      .gte("data", inicio).lt("data", fim);
+    if (batchIdsForEntries) {
+      if (batchIdsForEntries.length === 0) {
+        entriesQ = entriesQ.eq("batch_id", "00000000-0000-0000-0000-000000000000");
+      } else {
+        entriesQ = entriesQ.in("batch_id", batchIdsForEntries);
+      }
+    }
+
     const [
       { data: batchesData },
       { data: allStatus },
@@ -59,12 +83,12 @@ export default function Dashboard() {
       { data: entries },
       { data: adjustments },
     ] = await Promise.all([
-      supabase.from("timesheet_batches").select("id, nome, status, total_paginas, total_marcacoes, created_at").order("created_at", { ascending: false }).limit(8),
-      supabase.from("timesheet_batches").select("status"),
-      supabase.from("employees").select("id", { count: "exact", head: true }).eq("status", "ativo"),
-      supabase.from("employee_documents").select("id", { count: "exact", head: true }).eq("status", "pendente_revisao"),
-      supabase.from("time_entries").select("status, is_absence, is_justified, has_medical_certificate, overtime_hours").gte("data", inicio).lt("data", fim),
-      supabase.from("payroll_adjustments").select("tipo, valor_horas").eq("tipo", "dsr_desconto").gte("data", inicio).lt("data", fim),
+      filterCompany(supabase.from("timesheet_batches").select("id, nome, status, total_paginas, total_marcacoes, created_at").order("created_at", { ascending: false }).limit(8) as any),
+      filterCompany(supabase.from("timesheet_batches").select("status") as any),
+      filterCompany(supabase.from("employees").select("id", { count: "exact", head: true }).eq("status", "ativo") as any),
+      filterCompany(supabase.from("employee_documents").select("id", { count: "exact", head: true }).eq("status", "pendente_revisao") as any),
+      entriesQ,
+      filterCompany(supabase.from("payroll_adjustments").select("tipo, valor_horas").eq("tipo", "dsr_desconto").gte("data", inicio).lt("data", fim) as any),
     ]);
 
     setBatches((batchesData ?? []) as Batch[]);
