@@ -27,12 +27,16 @@ export default function Funcionarios() {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Employee | null>(null);
+  const [companyFilter, setCompanyFilter] = useState<string | null>(null);
+  const [createCompanyId, setCreateCompanyId] = useState<string | null>(null);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [companyFilter]);
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase.from("employees").select("*").order("nome");
+    let q = supabase.from("employees").select("*").order("nome");
+    if (companyFilter) q = q.eq("company_id", companyFilter);
+    const { data } = await q;
     setList((data ?? []) as Employee[]);
     setLoading(false);
   }
@@ -52,11 +56,13 @@ export default function Funcionarios() {
       const { error } = await supabase.from("employees").update(payload).eq("id", editing.id);
       if (error) return toast.error(error.message);
     } else {
-      const { error } = await supabase.from("employees").insert({ ...payload, company_id: profile!.company_id! });
+      const company_id = isSuperAdmin ? createCompanyId : profile?.company_id;
+      if (!company_id) return toast.error("Selecione a empresa");
+      const { error } = await supabase.from("employees").insert({ ...payload, company_id });
       if (error) return toast.error(error.message);
     }
     toast.success("Funcionário salvo");
-    setOpen(false); setEditing(null); load();
+    setOpen(false); setEditing(null); setCreateCompanyId(null); load();
   }
 
   async function validar(emp: Employee) {
