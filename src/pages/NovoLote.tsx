@@ -60,7 +60,7 @@ export default function NovoLote() {
     if (bErr) throw bErr;
 
     for (const file of arquivos) {
-      const path = `${profile.company_id}/${batch.id}/${crypto.randomUUID()}-${file.name}`;
+      const path = `${company_id}/${batch.id}/${crypto.randomUUID()}-${file.name}`;
       const { error: upErr } = await supabase.storage.from("timesheets").upload(path, file, { contentType: file.type });
       if (upErr) throw upErr;
       const { error: fErr } = await supabase.from("timesheet_files").insert({
