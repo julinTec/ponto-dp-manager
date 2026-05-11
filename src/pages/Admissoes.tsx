@@ -113,7 +113,12 @@ export default function Admissoes() {
         <PageHeader
           title="Admissão de Funcionários"
           subtitle="Envio de documentos com leitura automática para cadastro do funcionário"
-          actions={canEdit && <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-2" />Nova admissão</Button>}
+          actions={
+            <div className="flex items-center gap-2">
+              <CompanyFilter value={companyFilter} onChange={setCompanyFilter} />
+              {canEdit && <Button onClick={() => { setCreateCompanyId(null); setOpen(true); }}><Plus className="h-4 w-4 mr-2" />Nova admissão</Button>}
+            </div>
+          }
         />
 
         <Card className="overflow-hidden">
