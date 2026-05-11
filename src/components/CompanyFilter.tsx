@@ -16,15 +16,12 @@ let inFlight: Promise<Company[]> | null = null;
 async function fetchCompanies(): Promise<Company[]> {
   if (cache) return cache;
   if (inFlight) return inFlight;
-  inFlight = supabase
-    .from("companies")
-    .select("id, nome")
-    .order("nome")
-    .then(({ data }) => {
-      cache = (data ?? []) as Company[];
-      inFlight = null;
-      return cache;
-    });
+  inFlight = (async () => {
+    const { data } = await supabase.from("companies").select("id, nome").order("nome");
+    cache = (data ?? []) as Company[];
+    inFlight = null;
+    return cache;
+  })();
   return inFlight;
 }
 
