@@ -43,12 +43,13 @@ export default function NovoLote() {
 
   // ---------- Lógica compartilhada ----------
   async function criarLoteEEnviar(arquivos: File[], meta: { nome: string; mes: number; ano: number }) {
-    if (!profile?.company_id) throw new Error("Empresa não encontrada");
+    const company_id = isSuperAdmin ? companyId : profile?.company_id;
+    if (!company_id) throw new Error("Selecione a empresa");
     const { data: batch, error: bErr } = await supabase
       .from("timesheet_batches")
       .insert({
-        company_id: profile.company_id,
-        criado_por: profile.id,
+        company_id,
+        criado_por: profile?.id,
         nome: meta.nome,
         mes_referencia: meta.mes,
         ano_referencia: meta.ano,
