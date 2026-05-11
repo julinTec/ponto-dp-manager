@@ -159,6 +159,12 @@ export default function Admissoes() {
           <DialogContent className="max-w-2xl">
             <DialogHeader><DialogTitle>Nova admissão</DialogTitle></DialogHeader>
             <div className="space-y-4">
+              {isSuperAdmin && (
+                <div className="space-y-2">
+                  <Label>Empresa</Label>
+                  <CompanyPicker value={createCompanyId} onChange={setCreateCompanyId} />
+                </div>
+              )}
               <Label>Documentos</Label>
               <label htmlFor="adm-files" className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-lg py-8 cursor-pointer hover:border-primary hover:bg-accent/30 transition-colors"
                 onDragOver={(e) => e.preventDefault()}
