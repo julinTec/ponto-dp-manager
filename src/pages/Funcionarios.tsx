@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Loader2, Users as UsersIcon, CheckCircle2, Trash2 } from "lucide-react";
+import { CompanyFilter, CompanyPicker } from "@/components/CompanyFilter";
 import { toast } from "sonner";
 
 interface Employee {
