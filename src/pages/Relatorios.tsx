@@ -81,6 +81,7 @@ export default function Relatorios() {
     setLoading(true);
     const useLote = forceLote ?? (loteId !== "todos" ? loteId : undefined);
     const body: any = useLote ? { batch_id: useLote } : { mes: parseInt(mes), ano: parseInt(ano) };
+    if (companyFilter && !useLote) body.company_id = companyFilter;
     const { data, error } = await supabase.functions.invoke("monthly-report", { body });
     setLoading(false);
     if (error) { console.error(error); return toast.error("Erro ao gerar relatório"); }
