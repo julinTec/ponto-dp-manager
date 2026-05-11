@@ -48,12 +48,25 @@ Deno.serve(async (req) => {
       inicio = `${ano}-${String(mes).padStart(2, "0")}-01`;
       fimExclusivo = mes === 12 ? `${ano + 1}-01-01` : `${ano}-${String(mes + 1).padStart(2, "0")}-01`;
       q = q.gte("data", inicio).lt("data", fimExclusivo);
+      if (company_id) {
+        const { data: bs } = await userClient
+          .from("timesheet_batches").select("id").eq("company_id", company_id);
+        const ids = (bs ?? []).map((b: any) => b.id);
+        if (ids.length === 0) {
+          // sem lotes para essa empresa neste critério: força resultado vazio
+          q = q.eq("batch_id", "00000000-0000-0000-0000-000000000000");
+        } else {
+          q = q.in("batch_id", ids);
+        }
+      }
     }
 
     const { data: entries, error } = await q;
     if (error) throw error;
 
-    const { data: emps } = await userClient.from("employees").select("id, nome, cpf, cargo, funcao");
+    let empsQ = userClient.from("employees").select("id, nome, cpf, cargo, funcao");
+    if (company_id) empsQ = empsQ.eq("company_id", company_id);
+    const { data: emps } = await empsQ;
     const empMap = new Map<string, any>();
     (emps ?? []).forEach((e: any) => empMap.set(e.id, e));
 
