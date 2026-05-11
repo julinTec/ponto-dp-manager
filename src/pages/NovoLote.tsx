@@ -141,6 +141,14 @@ export default function NovoLote() {
           subtitle="Envie uma folha individual ou um lote com vários arquivos para processamento automático"
         />
 
+        {isSuperAdmin && (
+          <Card className="p-4 space-y-2">
+            <Label>Empresa do lote</Label>
+            <CompanyPicker value={companyId} onChange={setCompanyId} className="w-full max-w-md" />
+            <p className="text-xs text-muted-foreground">Os funcionários e marcações deste lote serão registrados nesta empresa.</p>
+          </Card>
+        )}
+
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="grid grid-cols-2 w-full max-w-md">
             <TabsTrigger value="single"><FileUp className="h-4 w-4 mr-2" />Folha única</TabsTrigger>
