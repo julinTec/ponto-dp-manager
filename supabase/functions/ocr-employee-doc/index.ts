@@ -47,59 +47,64 @@ Deno.serve(async (req) => {
     const buf = await blob.arrayBuffer();
     const bytes = new Uint8Array(buf);
     let bin = ""; for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-    const dataUrl = `data:${blob.type || doc.mime_type || "image/jpeg"};base64,${btoa(bin)}`;
+    const base64 = btoa(bin);
+    const mime = blob.type || doc.mime_type || "image/jpeg";
 
     const sysPrompt = `Você é um especialista em leitura de documentos trabalhistas brasileiros. ${PROMPTS[doc.document_type] ?? PROMPTS.outro}
 Retorne via tool calling. Indique a confianca_geral (0..1). Datas no formato YYYY-MM-DD ou null se não conseguir ler.`;
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${lovableKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
-        messages: [
-          { role: "system", content: sysPrompt },
-          { role: "user", content: [
-            { type: "text", text: "Extraia os dados solicitados deste documento." },
-            { type: "image_url", image_url: { url: dataUrl } },
-          ]},
-        ],
-        tools: [{
-          type: "function",
-          function: {
-            name: "extrair_dados_documento",
-            description: "Dados extraídos do documento trabalhista",
-            parameters: {
-              type: "object",
-              properties: {
-                nome: { type: ["string","null"] },
-                cpf: { type: ["string","null"] },
-                document_date: { type: ["string","null"] },
-                start_date: { type: ["string","null"] },
-                end_date: { type: ["string","null"] },
-                dias: { type: ["number","null"] },
-                cid: { type: ["string","null"] },
-                observacao: { type: ["string","null"] },
-                confianca_geral: { type: "number" },
+    const aiResp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${googleKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: sysPrompt }] },
+          contents: [{
+            role: "user",
+            parts: [
+              { text: "Extraia os dados solicitados deste documento." },
+              { inline_data: { mime_type: mime, data: base64 } },
+            ],
+          }],
+          tools: [{
+            functionDeclarations: [{
+              name: "extrair_dados_documento",
+              description: "Dados extraídos do documento trabalhista",
+              parameters: {
+                type: "object",
+                properties: {
+                  nome: { type: "string", nullable: true },
+                  cpf: { type: "string", nullable: true },
+                  document_date: { type: "string", nullable: true },
+                  start_date: { type: "string", nullable: true },
+                  end_date: { type: "string", nullable: true },
+                  dias: { type: "number", nullable: true },
+                  cid: { type: "string", nullable: true },
+                  observacao: { type: "string", nullable: true },
+                  confianca_geral: { type: "number" },
+                },
+                required: ["confianca_geral"],
               },
-              required: ["confianca_geral"],
-            },
-          },
-        }],
-        tool_choice: { type: "function", function: { name: "extrair_dados_documento" } },
-      }),
-    });
+            }],
+          }],
+          toolConfig: { functionCallingConfig: { mode: "ANY", allowedFunctionNames: ["extrair_dados_documento"] } },
+        }),
+      },
+    );
 
     if (!aiResp.ok) {
       const t = await aiResp.text();
-      if (aiResp.status === 429) throw new Error("Limite de requisições. Tente novamente.");
-      if (aiResp.status === 402) throw new Error("Créditos de IA esgotados.");
-      throw new Error(`AI gateway: ${aiResp.status} ${t}`);
+      if (aiResp.status === 429) throw new Error("Limite de requisições do Google Gemini. Tente novamente.");
+      if (aiResp.status === 403) throw new Error("Chave Google Gemini inválida ou sem permissão.");
+      if (aiResp.status === 400 && t.includes("API_KEY_INVALID")) throw new Error("Chave Google Gemini inválida.");
+      throw new Error(`Google Gemini API: ${aiResp.status} ${t}`);
     }
 
     const aiJson = await aiResp.json();
-    const tc = aiJson.choices?.[0]?.message?.tool_calls?.[0];
-    const args = tc ? JSON.parse(tc.function.arguments) : {};
+    const parts = aiJson?.candidates?.[0]?.content?.parts ?? [];
+    const fnPart = parts.find((p: any) => p?.functionCall);
+    const args = fnPart?.functionCall?.args ?? {};
     const conf = typeof args.confianca_geral === "number" ? Math.max(0, Math.min(1, args.confianca_geral)) : 0.5;
     const { confianca_geral, ...dados } = args;
 
