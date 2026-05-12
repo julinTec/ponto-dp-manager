@@ -1,0 +1,1 @@
+UPDATE public.timesheet_batches SET status='enviado' WHERE id='9d7dafb4-dd77-439e-8fbf-04c3c295acd2' AND status='processando';
