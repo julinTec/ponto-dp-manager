@@ -26,8 +26,8 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const lovableKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!lovableKey) throw new Error("LOVABLE_API_KEY não configurada");
+    const googleKey = Deno.env.get("GOOGLE_GEMINI_API_KEY");
+    if (!googleKey) throw new Error("GOOGLE_GEMINI_API_KEY não configurada");
 
     const admin = createClient(supabaseUrl, serviceKey);
 
@@ -45,63 +45,68 @@ Deno.serve(async (req) => {
     const buf = await blob.arrayBuffer();
     const bytes = new Uint8Array(buf);
     let bin = ""; for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-    const dataUrl = `data:${blob.type || doc.mime_type || "image/jpeg"};base64,${btoa(bin)}`;
+    const base64 = btoa(bin);
+    const mime = blob.type || doc.mime_type || "image/jpeg";
 
     const sysPrompt = `Você é um especialista em leitura de documentos brasileiros de RH/DP. ${PROMPTS[doc.tipo] ?? PROMPTS.outro}
 Retorne via tool calling. Para cada campo, indique também a confiança (0..1). Se não conseguir ler, deixe null.`;
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${lovableKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
-        messages: [
-          { role: "system", content: sysPrompt },
-          { role: "user", content: [
-            { type: "text", text: "Extraia os dados solicitados deste documento." },
-            { type: "image_url", image_url: { url: dataUrl } },
-          ]},
-        ],
-        tools: [{
-          type: "function",
-          function: {
-            name: "extrair_dados_admissao",
-            description: "Dados extraídos do documento",
-            parameters: {
-              type: "object",
-              properties: {
-                nome: { type: ["string","null"] },
-                cpf: { type: ["string","null"] },
-                rg: { type: ["string","null"] },
-                data_nascimento: { type: ["string","null"] },
-                endereco: { type: ["string","null"] },
-                telefone: { type: ["string","null"] },
-                email: { type: ["string","null"] },
-                cargo: { type: ["string","null"] },
-                admission_date: { type: ["string","null"] },
-                salario: { type: ["number","null"] },
-                jornada_padrao_horas: { type: ["number","null"] },
-                document_date: { type: ["string","null"] },
-                confianca_geral: { type: "number" },
+    const aiResp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${googleKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: sysPrompt }] },
+          contents: [{
+            role: "user",
+            parts: [
+              { text: "Extraia os dados solicitados deste documento." },
+              { inline_data: { mime_type: mime, data: base64 } },
+            ],
+          }],
+          tools: [{
+            functionDeclarations: [{
+              name: "extrair_dados_admissao",
+              description: "Dados extraídos do documento",
+              parameters: {
+                type: "object",
+                properties: {
+                  nome: { type: "string", nullable: true },
+                  cpf: { type: "string", nullable: true },
+                  rg: { type: "string", nullable: true },
+                  data_nascimento: { type: "string", nullable: true },
+                  endereco: { type: "string", nullable: true },
+                  telefone: { type: "string", nullable: true },
+                  email: { type: "string", nullable: true },
+                  cargo: { type: "string", nullable: true },
+                  admission_date: { type: "string", nullable: true },
+                  salario: { type: "number", nullable: true },
+                  jornada_padrao_horas: { type: "number", nullable: true },
+                  document_date: { type: "string", nullable: true },
+                  confianca_geral: { type: "number" },
+                },
+                required: ["confianca_geral"],
               },
-              required: ["confianca_geral"],
-            },
-          },
-        }],
-        tool_choice: { type: "function", function: { name: "extrair_dados_admissao" } },
-      }),
-    });
+            }],
+          }],
+          toolConfig: { functionCallingConfig: { mode: "ANY", allowedFunctionNames: ["extrair_dados_admissao"] } },
+        }),
+      },
+    );
 
     if (!aiResp.ok) {
       const t = await aiResp.text();
-      if (aiResp.status === 429) throw new Error("Limite de requisições. Tente novamente.");
-      if (aiResp.status === 402) throw new Error("Créditos de IA esgotados.");
-      throw new Error(`AI gateway: ${aiResp.status} ${t}`);
+      if (aiResp.status === 429) throw new Error("Limite de requisições do Google Gemini. Tente novamente.");
+      if (aiResp.status === 403) throw new Error("Chave Google Gemini inválida ou sem permissão.");
+      if (aiResp.status === 400 && t.includes("API_KEY_INVALID")) throw new Error("Chave Google Gemini inválida.");
+      throw new Error(`Google Gemini API: ${aiResp.status} ${t}`);
     }
 
     const aiJson = await aiResp.json();
-    const tc = aiJson.choices?.[0]?.message?.tool_calls?.[0];
-    const args = tc ? JSON.parse(tc.function.arguments) : {};
+    const parts = aiJson?.candidates?.[0]?.content?.parts ?? [];
+    const fnPart = parts.find((p: any) => p?.functionCall);
+    const args = fnPart?.functionCall?.args ?? {};
     const conf = typeof args.confianca_geral === "number" ? Math.max(0, Math.min(1, args.confianca_geral)) : 0.5;
     const { confianca_geral, ...dados } = args;
 
