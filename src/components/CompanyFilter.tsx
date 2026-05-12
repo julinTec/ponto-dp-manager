@@ -13,6 +13,11 @@ interface Company {
 let cache: Company[] | null = null;
 let inFlight: Promise<Company[]> | null = null;
 
+export function clearCompaniesCache() {
+  cache = null;
+  inFlight = null;
+}
+
 async function fetchCompanies(): Promise<Company[]> {
   if (cache) return cache;
   if (inFlight) return inFlight;
