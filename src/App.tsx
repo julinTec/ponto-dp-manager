@@ -17,6 +17,7 @@ import AdmissaoDetalhe from "./pages/AdmissaoDetalhe";
 import Documentos from "./pages/Documentos";
 import SuperAdmin from "./pages/SuperAdmin";
 import NotFound from "./pages/NotFound.tsx";
+import GeminiTest from "./pages/GeminiTest";
 
 const queryClient = new QueryClient();
 
