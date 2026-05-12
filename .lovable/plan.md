@@ -1,25 +1,12 @@
 ## Objetivo
-Trocar o modelo Gemini de `gemini-2.5-pro` para `gemini-2.5-flash` nas 3 edge functions de OCR e corrigir o tratamento de erros que deixa páginas presas em `processando`.
+Adicionar um novo secret chamado `GEMINI_API_KEY` ao projeto.
 
-## Alterações
+## Contexto
+O projeto já possui o secret `GOOGLE_GEMINI_API_KEY`, mas o usuário precisa de um novo secret com o nome `GEMINI_API_KEY` (possivelmente para uso em outro contexto ou com uma chave diferente).
 
-### 1. Edge functions (3 arquivos)
-Em `supabase/functions/ocr-page/index.ts`, `ocr-admission-doc/index.ts` e `ocr-employee-doc/index.ts`:
-- Trocar a URL `…/models/gemini-2.5-pro:generateContent` por `…/models/gemini-2.5-flash:generateContent`.
-- Mover a leitura de `req.json()` para fora do `try`, guardando os IDs em variáveis no escopo externo, para que o `catch` consiga atualizar o status corretamente.
-- No `catch`, gravar `ocr_status = 'falhou'` e `error_message` legível (incluindo "Limite de requisições atingido" quando `429`).
-
-### 2. Migração para destravar o lote atual
-Migration que atualiza:
-- `timesheet_pages` com `ocr_status = 'processando'` há mais de 5 minutos no lote `9d7dafb4-dd77-439e-8fbf-04c3c295acd2` → `falhou` com mensagem "Falha por limite de requisições da API Gemini (429). Reenvie."
-- `timesheet_batches.status` do mesmo lote → `falhou` se nenhuma página ficou `concluida`.
-
-### 3. Deploy
-Reimplantar `ocr-page`, `ocr-admission-doc`, `ocr-employee-doc`.
-
-## Fora do escopo
-- Nenhuma mudança de UI, RLS ou schema.
-- Sem alterações no fluxo de upload nem nos componentes do frontend.
+## Passo
+1. Solicitar ao usuário o valor do secret `GEMINI_API_KEY` via formulário seguro do Lovable.
+2. O secret será armazenado como variável de ambiente e estará disponível nas edge functions e código backend.
 
 ## Observação
-Se mesmo no Flash o 429 persistir, próximos passos serão habilitar billing no Google Cloud ou voltar para Lovable AI Gateway — fora desta entrega.
+Nenhuma alteração de código ou arquivo do projeto é necessária para esta tarefa — apenas a configuração do secret no painel de secrets do Lovable.
