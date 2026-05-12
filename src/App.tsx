@@ -17,6 +17,7 @@ import AdmissaoDetalhe from "./pages/AdmissaoDetalhe";
 import Documentos from "./pages/Documentos";
 import SuperAdmin from "./pages/SuperAdmin";
 import NotFound from "./pages/NotFound.tsx";
+import GeminiTest from "./pages/GeminiTest";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => (
           <Route path="/documentos" element={<ProtectedRoute><Documentos /></ProtectedRoute>} />
           <Route path="/usuarios" element={<ProtectedRoute><Usuarios /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute><SuperAdmin /></ProtectedRoute>} />
+          <Route path="/gemini" element={<GeminiTest />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
