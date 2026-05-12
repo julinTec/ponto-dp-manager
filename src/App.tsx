@@ -40,6 +40,7 @@ const App = () => (
           <Route path="/documentos" element={<ProtectedRoute><Documentos /></ProtectedRoute>} />
           <Route path="/usuarios" element={<ProtectedRoute><Usuarios /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute><SuperAdmin /></ProtectedRoute>} />
+          <Route path="/gemini" element={<GeminiTest />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
