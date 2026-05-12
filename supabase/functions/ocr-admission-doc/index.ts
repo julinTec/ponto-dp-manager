@@ -20,8 +20,10 @@ const PROMPTS: Record<string, string> = {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  let admission_document_id: string | undefined;
   try {
-    const { admission_document_id } = await req.json();
+    const body = await req.json();
+    admission_document_id = body.admission_document_id;
     if (!admission_document_id) throw new Error("admission_document_id obrigatório");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -52,7 +54,7 @@ Deno.serve(async (req) => {
 Retorne via tool calling. Para cada campo, indique também a confiança (0..1). Se não conseguir ler, deixe null.`;
 
     const aiResp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${googleKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${googleKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -133,7 +135,6 @@ Retorne via tool calling. Para cada campo, indique também a confiança (0..1). 
   } catch (e) {
     const msg = e instanceof Error ? e.message : "erro";
     try {
-      const { admission_document_id } = await req.clone().json().catch(() => ({}));
       if (admission_document_id) {
         const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
         await admin.from("admission_documents").update({ ocr_status: "falhou", erro: msg }).eq("id", admission_document_id);
