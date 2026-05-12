@@ -1,76 +1,44 @@
 ## Contexto
 
-Hoje cada usuário pertence a UMA empresa via `profiles.company_id`, e o RLS já isola dados por empresa. Super Admin vê tudo agregado mas sem filtro na UI.
-
-Decisões confirmadas:
-1. Apenas Super Admin precisa filtrar entre empresas (usuários comuns continuam restritos pelo RLS).
-2. Filtro **por página** (não global) — cada tela tem seu próprio seletor local.
-3. No upload de lote, Super Admin escolhe explicitamente a empresa. A IA não detecta empresa do cabeçalho.
+Hoje a tabela `companies` só recebe novas empresas via trigger `handle_new_user` (quando alguém se cadastra). Não há UI para Super Admin criar/editar/desativar empresas manualmente. A página `SuperAdmin.tsx` já lista empresas mas é só leitura.
 
 ## Plano
 
-### 1. Componente reutilizável `CompanyFilter`
+### 1. CRUD de empresas na página `SuperAdmin.tsx`
 
-Criar `src/components/CompanyFilter.tsx`:
-- Props: `value: string | null`, `onChange: (id: string | null) => void`, `className?`.
-- Renderiza apenas se `useAuth().isSuperAdmin === true` (caso contrário, retorna `null`).
-- Internamente busca a lista de empresas (`supabase.from("companies").select("id, nome").order("nome")`) com cache simples via `useState` + `useEffect` (uma vez por montagem).
-- UI: `<Select>` shadcn com ícone `Building2`, opção "Todas as empresas" (value vazio) + uma opção por empresa.
-- Largura fixa (~240px), alinhado à direita do header da página.
+Transformar a página existente em gestão completa de empresas (apenas Super Admin):
 
-### 2. Aplicar em cada página listada
+- **Botão "Nova empresa"** no header da página → abre `Dialog` com formulário:
+  - `nome` (obrigatório)
+  - `cnpj` (opcional, com máscara `00.000.000/0000-00`)
+  - `ativo` (default true)
+- **Ações por linha** na tabela:
+  - **Editar** → mesmo `Dialog` em modo edição (nome, cnpj, ativo)
+  - **Ativar/Suspender** → toggle rápido do campo `ativo`
+  - **Excluir** → `AlertDialog` de confirmação. Bloqueia exclusão se houver `profiles`, `employees` ou `timesheet_batches` vinculados (checa antes via `count` e mostra toast explicativo).
+- Validação: nome mínimo 2 chars; CNPJ, se preenchido, validar formato (14 dígitos) sem checar dígito verificador.
+- Após cada operação, recarregar lista e invalidar cache do `CompanyFilter` (expor função `clearCompaniesCache()` no `CompanyFilter.tsx` para forçar refetch nas próximas montagens).
 
-Em cada página, adicionar:
-```tsx
-const { isSuperAdmin } = useAuth();
-const [companyFilter, setCompanyFilter] = useState<string | null>(null);
-// ... no JSX do header da página:
-<CompanyFilter value={companyFilter} onChange={setCompanyFilter} />
+### 2. Invalidar cache do `CompanyFilter`
+
+`src/components/CompanyFilter.tsx` mantém `cache: Company[] | null` em módulo. Adicionar export:
+```ts
+export function clearCompaniesCache() { cache = null; }
 ```
+Chamar após criar/editar/excluir empresa para que o seletor reflita imediatamente.
 
-E nas queries, quando `companyFilter` for não-nulo, aplicar `.eq("company_id", companyFilter)`. Para usuários não-super_admin, o filtro nem aparece e o RLS continua isolando por empresa naturalmente.
+### 3. Sem mudanças de banco
 
-| Página | Tabelas a filtrar |
-|---|---|
-| Dashboard | `timesheet_batches`, `employees`, `employee_documents`, `time_entries` (via `batch_id in batches.company_id`), `payroll_adjustments` |
-| Lotes | `timesheet_batches` |
-| Admissões | `employee_admissions` |
-| Funcionários | `employees` |
-| Documentos | `employee_documents` |
-| Relatórios | filtros existentes + `company_id` opcional |
+Schema da tabela `companies` já cobre tudo (`nome`, `cnpj`, `ativo`, timestamps). RLS já permite Super Admin (`Super admin all companies` policy com `ALL`) — INSERT/UPDATE/DELETE funcionam sem migração.
 
-Cada página mantém seu próprio estado — trocar empresa em "Lotes" não afeta "Funcionários".
+### 4. Acesso
 
-### 3. Seletor de empresa nos formulários de criação (Super Admin)
-
-Quando Super Admin cria algo que precisa de `company_id`, exibir um `<Select>` obrigatório de empresa antes de inserir:
-- `src/pages/NovoLote.tsx` — empresa do lote
-- formulário de novo funcionário em `Funcionarios.tsx`
-- formulário de nova admissão em `Admissoes.tsx`
-- formulário de novo documento em `Documentos.tsx`
-
-Para usuários comuns: nada muda, usa `profile.company_id` automaticamente.
-
-### 4. Sem mudanças de banco / IA
-
-- Nenhuma migration. Schema já é multi-empresa.
-- `process-batch` e demais edge functions continuam usando o `company_id` do lote (vindo do upload). Funcionários criados durante o OCR herdam esse `company_id`. Nenhuma alteração na lógica de IA.
+Item "Super Admin" no menu lateral já existe e leva para `/super-admin`. Mantém-se restrito por `isSuperAdmin` + `<Navigate>`.
 
 ## Arquivos afetados
 
-**Novos**
-- `src/components/CompanyFilter.tsx`
+**Editados**
+- `src/pages/SuperAdmin.tsx` — adicionar formulário (Dialog), ações por linha, AlertDialog de exclusão, validação e checagem de vínculos antes de deletar.
+- `src/components/CompanyFilter.tsx` — exportar `clearCompaniesCache()`.
 
-**Editados (filtro de listagem)**
-- `src/pages/Dashboard.tsx`
-- `src/pages/Lotes.tsx`
-- `src/pages/Admissoes.tsx`
-- `src/pages/Funcionarios.tsx`
-- `src/pages/Documentos.tsx`
-- `src/pages/Relatorios.tsx`
-
-**Editados (seletor de empresa em criação para Super Admin)**
-- `src/pages/NovoLote.tsx`
-- formulários em `Funcionarios.tsx`, `Admissoes.tsx`, `Documentos.tsx` (já listados acima)
-
-Sem migrations. Sem alteração em edge functions. RLS atual permanece intacto.
+Sem migrations. Sem alteração em edge functions. Sem mudança no fluxo de signup (continua criando empresa "fantasma" para novos cadastros, que o Super Admin pode renomear/mesclar manualmente depois).
