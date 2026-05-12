@@ -260,7 +260,7 @@ export default function SuperAdmin() {
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </Dialog>
+      </AlertDialog>
     </AppLayout>
   );
 }
