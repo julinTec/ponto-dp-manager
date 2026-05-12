@@ -1,47 +1,25 @@
-## Contexto
+## Objetivo
+Trocar o modelo Gemini de `gemini-2.5-pro` para `gemini-2.5-flash` nas 3 edge functions de OCR e corrigir o tratamento de erros que deixa páginas presas em `processando`.
 
-Hoje as edge functions de OCR (`ocr-page`, `ocr-admission-doc`, `ocr-employee-doc`) usam o **Lovable AI Gateway** (`https://ai.gateway.lovable.dev`) com a `LOVABLE_API_KEY`. Você quer passar a chamar **diretamente a API Gemini do Google** usando sua própria chave (Google AI Studio / Generative Language API).
+## Alterações
 
-## Plano
+### 1. Edge functions (3 arquivos)
+Em `supabase/functions/ocr-page/index.ts`, `ocr-admission-doc/index.ts` e `ocr-employee-doc/index.ts`:
+- Trocar a URL `…/models/gemini-2.5-pro:generateContent` por `…/models/gemini-2.5-flash:generateContent`.
+- Mover a leitura de `req.json()` para fora do `try`, guardando os IDs em variáveis no escopo externo, para que o `catch` consiga atualizar o status corretamente.
+- No `catch`, gravar `ocr_status = 'falhou'` e `error_message` legível (incluindo "Limite de requisições atingido" quando `429`).
 
-### 1. Armazenar a chave como secret (seguro)
+### 2. Migração para destravar o lote atual
+Migration que atualiza:
+- `timesheet_pages` com `ocr_status = 'processando'` há mais de 5 minutos no lote `9d7dafb4-dd77-439e-8fbf-04c3c295acd2` → `falhou` com mensagem "Falha por limite de requisições da API Gemini (429). Reenvie."
+- `timesheet_batches.status` do mesmo lote → `falhou` se nenhuma página ficou `concluida`.
 
-Vou abrir o formulário seguro de secret pedindo `GOOGLE_GEMINI_API_KEY`. Você cola a **nova** chave lá (depois de revogar a que vazou no chat). A chave fica disponível só nas edge functions via `Deno.env.get("GOOGLE_GEMINI_API_KEY")`, nunca no frontend.
+### 3. Deploy
+Reimplantar `ocr-page`, `ocr-admission-doc`, `ocr-employee-doc`.
 
-### 2. Trocar o endpoint nas 3 edge functions de OCR
+## Fora do escopo
+- Nenhuma mudança de UI, RLS ou schema.
+- Sem alterações no fluxo de upload nem nos componentes do frontend.
 
-Em `ocr-page/index.ts`, `ocr-admission-doc/index.ts` e `ocr-employee-doc/index.ts`:
-
-- Substituir `https://ai.gateway.lovable.dev/v1/chat/completions` por chamada nativa Gemini:
-  `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${GOOGLE_GEMINI_API_KEY}`
-- Adaptar payload do formato OpenAI-compatible (`messages` + `tools` + `tool_choice`) para o formato nativo do Gemini:
-  - `contents: [{ role, parts: [{ text }, { inline_data: { mime_type, data } }] }]`
-  - `systemInstruction: { parts: [{ text }] }`
-  - `tools: [{ functionDeclarations: [...] }]` + `toolConfig: { functionCallingConfig: { mode: "ANY", allowedFunctionNames: [...] } }`
-- Adaptar parsing da resposta: ler `candidates[0].content.parts[*].functionCall.args` em vez de `choices[0].message.tool_calls[0].function.arguments`.
-- Tratar erros 429 (rate limit) e 403 (quota/chave inválida) com mensagens claras nos toasts/logs.
-
-### 3. Manter o resto inalterado
-
-- A função `monthly-report` não usa IA; permanece igual.
-- Storage, banco, RLS, frontend: nenhuma mudança.
-- Sem migrations.
-
-## Implicações que você precisa saber
-
-- **Cobrança**: passa a ser feita direto pelo Google na sua conta GCP (não consome mais créditos Lovable).
-- **Rate limits**: regidos pelo seu projeto Google, não pelo workspace Lovable.
-- **Modelo**: continuamos usando `gemini-2.5-pro` (mesmo modelo de hoje, só muda o canal).
-- **Fallback**: se a chave Google falhar, o OCR para — não vou manter Lovable AI como fallback (pra evitar cobrança dupla silenciosa). Se quiser fallback, me avise.
-
-## Arquivos afetados
-
-**Editados**
-- `supabase/functions/ocr-page/index.ts`
-- `supabase/functions/ocr-admission-doc/index.ts`
-- `supabase/functions/ocr-employee-doc/index.ts`
-
-**Secret novo**
-- `GOOGLE_GEMINI_API_KEY` (via tool segura)
-
-Sem mudanças em frontend, banco, RLS ou config.toml.
+## Observação
+Se mesmo no Flash o 429 persistir, próximos passos serão habilitar billing no Google Cloud ou voltar para Lovable AI Gateway — fora desta entrega.
