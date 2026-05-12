@@ -74,68 +74,71 @@ Deno.serve(async (req) => {
     for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
     const base64 = btoa(binary);
     const mime = blob.type || "image/jpeg";
-    const dataUrl = `data:${mime};base64,${base64}`;
 
-    // Chama Lovable AI Gateway com tool calling
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${lovableKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
-        messages: [
-          { role: "system", content: buildSystemPrompt(mesRef, anoRef) },
-          { role: "user", content: [
-            { type: "text", text: "Extraia todas as marcações de ponto desta folha." },
-            { type: "image_url", image_url: { url: dataUrl } },
-          ]},
-        ],
-        tools: [{
-          type: "function",
-          function: {
-            name: "registrar_marcacoes",
-            description: "Registra todas as linhas/marcações lidas",
-            parameters: {
-              type: "object",
-              properties: {
-                marcacoes: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      nome: { type: ["string", "null"] },
-                      cpf: { type: ["string", "null"] },
-                      funcao: { type: ["string", "null"] },
-                      data: { type: ["string", "null"], description: "YYYY-MM-DD" },
-                      dia_semana: { type: ["string", "null"] },
-                      entrada: { type: ["string", "null"] },
-                      saida_intervalo: { type: ["string", "null"] },
-                      retorno_intervalo: { type: ["string", "null"] },
-                      saida_final: { type: ["string", "null"] },
-                      status: { type: "string", enum: ["ok", "falta", "folga", "feriado", "inconsistente"] },
-                      confianca: { type: "number" },
+    // Chama Gemini API nativa do Google com function calling
+    const aiResp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${googleKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: buildSystemPrompt(mesRef, anoRef) }] },
+          contents: [{
+            role: "user",
+            parts: [
+              { text: "Extraia todas as marcações de ponto desta folha." },
+              { inline_data: { mime_type: mime, data: base64 } },
+            ],
+          }],
+          tools: [{
+            functionDeclarations: [{
+              name: "registrar_marcacoes",
+              description: "Registra todas as linhas/marcações lidas",
+              parameters: {
+                type: "object",
+                properties: {
+                  marcacoes: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        nome: { type: "string", nullable: true },
+                        cpf: { type: "string", nullable: true },
+                        funcao: { type: "string", nullable: true },
+                        data: { type: "string", nullable: true, description: "YYYY-MM-DD" },
+                        dia_semana: { type: "string", nullable: true },
+                        entrada: { type: "string", nullable: true },
+                        saida_intervalo: { type: "string", nullable: true },
+                        retorno_intervalo: { type: "string", nullable: true },
+                        saida_final: { type: "string", nullable: true },
+                        status: { type: "string", enum: ["ok", "falta", "folga", "feriado", "inconsistente"] },
+                        confianca: { type: "number" },
+                      },
+                      required: ["status", "confianca"],
                     },
-                    required: ["status", "confianca"],
                   },
                 },
+                required: ["marcacoes"],
               },
-              required: ["marcacoes"],
-            },
-          },
-        }],
-        tool_choice: { type: "function", function: { name: "registrar_marcacoes" } },
-      }),
-    });
+            }],
+          }],
+          toolConfig: { functionCallingConfig: { mode: "ANY", allowedFunctionNames: ["registrar_marcacoes"] } },
+        }),
+      },
+    );
 
     if (!aiResp.ok) {
       const text = await aiResp.text();
-      if (aiResp.status === 429) throw new Error("Limite de requisições atingido. Tente novamente em alguns instantes.");
-      if (aiResp.status === 402) throw new Error("Créditos de IA esgotados. Adicione créditos em Settings > Workspace > Usage.");
-      throw new Error(`AI gateway: ${aiResp.status} ${text}`);
+      if (aiResp.status === 429) throw new Error("Limite de requisições do Google Gemini atingido. Tente novamente em alguns instantes.");
+      if (aiResp.status === 403) throw new Error("Chave Google Gemini inválida ou sem permissão. Verifique a chave em Settings.");
+      if (aiResp.status === 400 && text.includes("API_KEY_INVALID")) throw new Error("Chave Google Gemini inválida.");
+      throw new Error(`Google Gemini API: ${aiResp.status} ${text}`);
     }
 
     const aiJson = await aiResp.json();
-    const toolCall = aiJson.choices?.[0]?.message?.tool_calls?.[0];
-    const args = toolCall ? JSON.parse(toolCall.function.arguments) : { marcacoes: [] };
+    const parts = aiJson?.candidates?.[0]?.content?.parts ?? [];
+    const fnPart = parts.find((p: any) => p?.functionCall);
+    const args = fnPart?.functionCall?.args ?? { marcacoes: [] };
     const marcacoes: any[] = args.marcacoes ?? [];
 
     // Carrega funcionários existentes para matching
