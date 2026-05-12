@@ -1,44 +1,47 @@
 ## Contexto
 
-Hoje a tabela `companies` só recebe novas empresas via trigger `handle_new_user` (quando alguém se cadastra). Não há UI para Super Admin criar/editar/desativar empresas manualmente. A página `SuperAdmin.tsx` já lista empresas mas é só leitura.
+Hoje as edge functions de OCR (`ocr-page`, `ocr-admission-doc`, `ocr-employee-doc`) usam o **Lovable AI Gateway** (`https://ai.gateway.lovable.dev`) com a `LOVABLE_API_KEY`. Você quer passar a chamar **diretamente a API Gemini do Google** usando sua própria chave (Google AI Studio / Generative Language API).
 
 ## Plano
 
-### 1. CRUD de empresas na página `SuperAdmin.tsx`
+### 1. Armazenar a chave como secret (seguro)
 
-Transformar a página existente em gestão completa de empresas (apenas Super Admin):
+Vou abrir o formulário seguro de secret pedindo `GOOGLE_GEMINI_API_KEY`. Você cola a **nova** chave lá (depois de revogar a que vazou no chat). A chave fica disponível só nas edge functions via `Deno.env.get("GOOGLE_GEMINI_API_KEY")`, nunca no frontend.
 
-- **Botão "Nova empresa"** no header da página → abre `Dialog` com formulário:
-  - `nome` (obrigatório)
-  - `cnpj` (opcional, com máscara `00.000.000/0000-00`)
-  - `ativo` (default true)
-- **Ações por linha** na tabela:
-  - **Editar** → mesmo `Dialog` em modo edição (nome, cnpj, ativo)
-  - **Ativar/Suspender** → toggle rápido do campo `ativo`
-  - **Excluir** → `AlertDialog` de confirmação. Bloqueia exclusão se houver `profiles`, `employees` ou `timesheet_batches` vinculados (checa antes via `count` e mostra toast explicativo).
-- Validação: nome mínimo 2 chars; CNPJ, se preenchido, validar formato (14 dígitos) sem checar dígito verificador.
-- Após cada operação, recarregar lista e invalidar cache do `CompanyFilter` (expor função `clearCompaniesCache()` no `CompanyFilter.tsx` para forçar refetch nas próximas montagens).
+### 2. Trocar o endpoint nas 3 edge functions de OCR
 
-### 2. Invalidar cache do `CompanyFilter`
+Em `ocr-page/index.ts`, `ocr-admission-doc/index.ts` e `ocr-employee-doc/index.ts`:
 
-`src/components/CompanyFilter.tsx` mantém `cache: Company[] | null` em módulo. Adicionar export:
-```ts
-export function clearCompaniesCache() { cache = null; }
-```
-Chamar após criar/editar/excluir empresa para que o seletor reflita imediatamente.
+- Substituir `https://ai.gateway.lovable.dev/v1/chat/completions` por chamada nativa Gemini:
+  `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${GOOGLE_GEMINI_API_KEY}`
+- Adaptar payload do formato OpenAI-compatible (`messages` + `tools` + `tool_choice`) para o formato nativo do Gemini:
+  - `contents: [{ role, parts: [{ text }, { inline_data: { mime_type, data } }] }]`
+  - `systemInstruction: { parts: [{ text }] }`
+  - `tools: [{ functionDeclarations: [...] }]` + `toolConfig: { functionCallingConfig: { mode: "ANY", allowedFunctionNames: [...] } }`
+- Adaptar parsing da resposta: ler `candidates[0].content.parts[*].functionCall.args` em vez de `choices[0].message.tool_calls[0].function.arguments`.
+- Tratar erros 429 (rate limit) e 403 (quota/chave inválida) com mensagens claras nos toasts/logs.
 
-### 3. Sem mudanças de banco
+### 3. Manter o resto inalterado
 
-Schema da tabela `companies` já cobre tudo (`nome`, `cnpj`, `ativo`, timestamps). RLS já permite Super Admin (`Super admin all companies` policy com `ALL`) — INSERT/UPDATE/DELETE funcionam sem migração.
+- A função `monthly-report` não usa IA; permanece igual.
+- Storage, banco, RLS, frontend: nenhuma mudança.
+- Sem migrations.
 
-### 4. Acesso
+## Implicações que você precisa saber
 
-Item "Super Admin" no menu lateral já existe e leva para `/super-admin`. Mantém-se restrito por `isSuperAdmin` + `<Navigate>`.
+- **Cobrança**: passa a ser feita direto pelo Google na sua conta GCP (não consome mais créditos Lovable).
+- **Rate limits**: regidos pelo seu projeto Google, não pelo workspace Lovable.
+- **Modelo**: continuamos usando `gemini-2.5-pro` (mesmo modelo de hoje, só muda o canal).
+- **Fallback**: se a chave Google falhar, o OCR para — não vou manter Lovable AI como fallback (pra evitar cobrança dupla silenciosa). Se quiser fallback, me avise.
 
 ## Arquivos afetados
 
 **Editados**
-- `src/pages/SuperAdmin.tsx` — adicionar formulário (Dialog), ações por linha, AlertDialog de exclusão, validação e checagem de vínculos antes de deletar.
-- `src/components/CompanyFilter.tsx` — exportar `clearCompaniesCache()`.
+- `supabase/functions/ocr-page/index.ts`
+- `supabase/functions/ocr-admission-doc/index.ts`
+- `supabase/functions/ocr-employee-doc/index.ts`
 
-Sem migrations. Sem alteração em edge functions. Sem mudança no fluxo de signup (continua criando empresa "fantasma" para novos cadastros, que o Super Admin pode renomear/mesclar manualmente depois).
+**Secret novo**
+- `GOOGLE_GEMINI_API_KEY` (via tool segura)
+
+Sem mudanças em frontend, banco, RLS ou config.toml.
