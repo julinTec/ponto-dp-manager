@@ -47,8 +47,10 @@ function normalizarData(raw: string | null, mes: number | null, ano: number | nu
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  let page_id: string | undefined;
   try {
-    const { page_id } = await req.json();
+    const body = await req.json();
+    page_id = body.page_id;
     if (!page_id) throw new Error("page_id obrigatório");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -77,7 +79,7 @@ Deno.serve(async (req) => {
 
     // Chama Gemini API nativa do Google com function calling
     const aiResp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${googleKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${googleKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -237,7 +239,6 @@ Deno.serve(async (req) => {
     console.error("ocr-page error:", e);
     const msg = e instanceof Error ? e.message : "erro";
     try {
-      const { page_id } = await req.clone().json().catch(() => ({}));
       if (page_id) {
         const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
         await admin.from("timesheet_pages").update({ ocr_status: "falhou", erro: msg }).eq("id", page_id);

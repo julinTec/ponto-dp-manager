@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
 Retorne via tool calling. Indique a confianca_geral (0..1). Datas no formato YYYY-MM-DD ou null se não conseguir ler.`;
 
     const aiResp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${googleKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${googleKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
