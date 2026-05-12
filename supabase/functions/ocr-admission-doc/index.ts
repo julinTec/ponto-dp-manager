@@ -26,8 +26,8 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const lovableKey = Deno.env.get("LOVABLE_API_KEY");
-    if (!lovableKey) throw new Error("LOVABLE_API_KEY não configurada");
+    const googleKey = Deno.env.get("GOOGLE_GEMINI_API_KEY");
+    if (!googleKey) throw new Error("GOOGLE_GEMINI_API_KEY não configurada");
 
     const admin = createClient(supabaseUrl, serviceKey);
 
