@@ -10,6 +10,7 @@ export default function GeminiTest() {
   const [prompt, setPrompt] = useState("");
   const [response, setResponse] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errorDetails, setErrorDetails] = useState<{ status: number; googleResponse: any } | null>(null);
   const { toast } = useToast();
 
   const handleSubmit = async () => {
@@ -20,12 +21,16 @@ export default function GeminiTest() {
     }
     setLoading(true);
     setResponse("");
+    setErrorDetails(null);
     try {
       const { data, error } = await supabase.functions.invoke("gemini-proxy", {
         body: { prompt: text },
       });
       if (error) throw new Error(error.message);
-      if (data?.error) throw new Error(data.error);
+      if (data?.error) {
+        setErrorDetails({ status: data.status ?? 0, googleResponse: data.googleResponse ?? null });
+        throw new Error(data.error);
+      }
       setResponse(data?.text ?? "(resposta vazia)");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro desconhecido";
@@ -57,6 +62,17 @@ export default function GeminiTest() {
             <div className="rounded-md border bg-muted p-4">
               <p className="mb-2 text-sm font-medium text-muted-foreground">Resposta</p>
               <pre className="whitespace-pre-wrap font-sans text-sm text-foreground">{response}</pre>
+            </div>
+          )}
+
+          {errorDetails && (
+            <div className="rounded-md border border-destructive bg-destructive/10 p-4">
+              <p className="mb-2 text-sm font-semibold text-destructive">
+                Erro Gemini — HTTP {errorDetails.status}
+              </p>
+              <pre className="whitespace-pre-wrap font-mono text-xs text-foreground">
+                {JSON.stringify(errorDetails.googleResponse, null, 2)}
+              </pre>
             </div>
           )}
         </CardContent>
