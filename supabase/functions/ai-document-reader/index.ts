@@ -7,10 +7,11 @@ const corsHeaders = {
 
 const DEFAULT_PRIMARY_TEXT = "google/gemma-4-31b-it:free";
 const DEFAULT_FALLBACK_TEXT = "openai/gpt-oss-120b:free";
-const DEFAULT_PRIMARY_VISION = "google/gemini-2.0-flash-exp:free";
-const DEFAULT_FALLBACK_VISION = "meta-llama/llama-3.2-11b-vision-instruct:free";
+const DEFAULT_PRIMARY_VISION = "meta-llama/llama-3.2-11b-vision-instruct:free";
+const DEFAULT_FALLBACK_VISION = "qwen/qwen2.5-vl-72b-instruct:free";
 
-const FALLBACK_STATUSES = new Set([429, 502, 503, 504]);
+// Inclui 400/404 (modelo indisponível/sem endpoints) além dos transientes
+const FALLBACK_STATUSES = new Set([400, 404, 429, 500, 502, 503, 504]);
 const TIMEOUT_MS = 60_000;
 
 interface CallArgs {
