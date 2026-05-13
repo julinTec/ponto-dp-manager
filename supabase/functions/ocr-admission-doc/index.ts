@@ -1,4 +1,4 @@
-// OCR de documento de admissão (RG, CPF, CTPS, contrato, ficha, etc.)
+// OCR de documento de admissão (RG, CPF, CTPS, contrato, ficha, etc.) via OpenRouter
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -17,6 +17,49 @@ const PROMPTS: Record<string, string> = {
   outro: "Extraia quaisquer dados pessoais e profissionais relevantes deste documento.",
 };
 
+const TOOLS = [{
+  type: "function",
+  function: {
+    name: "extrair_dados_admissao",
+    description: "Dados extraídos do documento",
+    parameters: {
+      type: "object",
+      properties: {
+        nome: { type: "string" },
+        cpf: { type: "string" },
+        rg: { type: "string" },
+        data_nascimento: { type: "string" },
+        endereco: { type: "string" },
+        telefone: { type: "string" },
+        email: { type: "string" },
+        cargo: { type: "string" },
+        admission_date: { type: "string" },
+        salario: { type: "number" },
+        jornada_padrao_horas: { type: "number" },
+        document_date: { type: "string" },
+        confianca_geral: { type: "number" },
+      },
+      required: ["confianca_geral"],
+    },
+  },
+}];
+
+async function callAIReader(payload: Record<string, unknown>) {
+  const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/ai-document-reader`;
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${serviceKey}`,
+      "apikey": serviceKey,
+    },
+    body: JSON.stringify(payload),
+  });
+  const json = await res.json().catch(() => ({}));
+  return { status: res.status, ok: res.ok, json };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -28,9 +71,6 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const googleKey = Deno.env.get("GOOGLE_GEMINI_API_KEY");
-    if (!googleKey) throw new Error("GOOGLE_GEMINI_API_KEY não configurada");
-
     const admin = createClient(supabaseUrl, serviceKey);
 
     await admin.from("admission_documents").update({ ocr_status: "processando" }).eq("id", admission_document_id);
@@ -51,64 +91,28 @@ Deno.serve(async (req) => {
     const mime = blob.type || doc.mime_type || "image/jpeg";
 
     const sysPrompt = `Você é um especialista em leitura de documentos brasileiros de RH/DP. ${PROMPTS[doc.tipo] ?? PROMPTS.outro}
-Retorne via tool calling. Para cada campo, indique também a confiança (0..1). Se não conseguir ler, deixe null.`;
+Use a ferramenta extrair_dados_admissao para retornar os dados. Indique a confianca_geral (0..1). Se não conseguir ler, deixe os campos em branco.`;
 
-    const aiResp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${googleKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: sysPrompt }] },
-          contents: [{
-            role: "user",
-            parts: [
-              { text: "Extraia os dados solicitados deste documento." },
-              { inline_data: { mime_type: mime, data: base64 } },
-            ],
-          }],
-          tools: [{
-            functionDeclarations: [{
-              name: "extrair_dados_admissao",
-              description: "Dados extraídos do documento",
-              parameters: {
-                type: "object",
-                properties: {
-                  nome: { type: "string", nullable: true },
-                  cpf: { type: "string", nullable: true },
-                  rg: { type: "string", nullable: true },
-                  data_nascimento: { type: "string", nullable: true },
-                  endereco: { type: "string", nullable: true },
-                  telefone: { type: "string", nullable: true },
-                  email: { type: "string", nullable: true },
-                  cargo: { type: "string", nullable: true },
-                  admission_date: { type: "string", nullable: true },
-                  salario: { type: "number", nullable: true },
-                  jornada_padrao_horas: { type: "number", nullable: true },
-                  document_date: { type: "string", nullable: true },
-                  confianca_geral: { type: "number" },
-                },
-                required: ["confianca_geral"],
-              },
-            }],
-          }],
-          toolConfig: { functionCallingConfig: { mode: "ANY", allowedFunctionNames: ["extrair_dados_admissao"] } },
-        }),
-      },
-    );
+    const { ok, status, json } = await callAIReader({
+      system: sysPrompt,
+      prompt: "Extraia os dados solicitados deste documento via tool extrair_dados_admissao.",
+      image_base64: base64,
+      mime_type: mime,
+      tools: TOOLS,
+      tool_choice: { type: "function", function: { name: "extrair_dados_admissao" } },
+    });
 
-    if (!aiResp.ok) {
-      const t = await aiResp.text();
-      if (aiResp.status === 429) throw new Error("Limite de requisições do Google Gemini. Tente novamente.");
-      if (aiResp.status === 403) throw new Error("Chave Google Gemini inválida ou sem permissão.");
-      if (aiResp.status === 400 && t.includes("API_KEY_INVALID")) throw new Error("Chave Google Gemini inválida.");
-      throw new Error(`Google Gemini API: ${aiResp.status} ${t}`);
+    if (!ok) {
+      throw new Error(`ai-document-reader ${status}: ${JSON.stringify(json).slice(0, 500)}`);
     }
 
-    const aiJson = await aiResp.json();
-    const parts = aiJson?.candidates?.[0]?.content?.parts ?? [];
-    const fnPart = parts.find((p: any) => p?.functionCall);
-    const args = fnPart?.functionCall?.args ?? {};
+    const toolCall = json?.tool_calls?.[0];
+    let args: any = {};
+    if (toolCall?.function?.arguments) {
+      try { args = JSON.parse(toolCall.function.arguments); } catch { args = {}; }
+    }
+    console.log(`ocr-admission-doc: model=${json.model_used}`);
+
     const conf = typeof args.confianca_geral === "number" ? Math.max(0, Math.min(1, args.confianca_geral)) : 0.5;
     const { confianca_geral, ...dados } = args;
 
@@ -119,7 +123,6 @@ Retorne via tool calling. Para cada campo, indique também a confiança (0..1). 
       checklist_status: conf >= 0.7 ? "recebido" : "em_analise",
     }).eq("id", admission_document_id);
 
-    // Consolida no employee_admissions: merge non-null fields, preserva existentes
     const existing = (doc.employee_admissions as any).dados_extraidos ?? {};
     const merged: any = { ...existing };
     for (const [k, v] of Object.entries(dados)) {
@@ -129,7 +132,7 @@ Retorne via tool calling. Para cada campo, indique também a confiança (0..1). 
       .update({ dados_extraidos: merged })
       .eq("id", (doc.employee_admissions as any).id);
 
-    return new Response(JSON.stringify({ ok: true, dados, confianca: conf }), {
+    return new Response(JSON.stringify({ ok: true, dados, confianca: conf, model_used: json.model_used }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

@@ -5,16 +5,46 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const PRIMARY_MODEL = "google/gemma-4-31b-it:free";
-const FALLBACK_MODEL = "openai/gpt-oss-120b:free";
-const FALLBACK_STATUSES = new Set([429, 502, 503, 504]);
-const TIMEOUT_MS = 30_000;
+const DEFAULT_PRIMARY_TEXT = "google/gemma-4-31b-it:free";
+const DEFAULT_FALLBACK_TEXT = "openai/gpt-oss-120b:free";
+const DEFAULT_PRIMARY_VISION = "google/gemini-2.0-flash-exp:free";
+const DEFAULT_FALLBACK_VISION = "meta-llama/llama-3.2-11b-vision-instruct:free";
 
-async function callOpenRouter(model: string, prompt: string, apiKey: string) {
+const FALLBACK_STATUSES = new Set([429, 502, 503, 504]);
+const TIMEOUT_MS = 60_000;
+
+interface CallArgs {
+  model: string;
+  apiKey: string;
+  prompt: string;
+  system?: string;
+  imageBase64?: string;
+  mimeType?: string;
+  tools?: unknown;
+  toolChoice?: unknown;
+}
+
+async function callOpenRouter(args: CallArgs) {
+  const { model, apiKey, prompt, system, imageBase64, mimeType, tools, toolChoice } = args;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    console.log(`[ai-document-reader] Tentando modelo: ${model}`);
+    const userContent: any = imageBase64
+      ? [
+          { type: "text", text: prompt },
+          { type: "image_url", image_url: { url: `data:${mimeType ?? "image/jpeg"};base64,${imageBase64}` } },
+        ]
+      : prompt;
+
+    const messages: any[] = [];
+    if (system) messages.push({ role: "system", content: system });
+    messages.push({ role: "user", content: userContent });
+
+    const body: Record<string, unknown> = { model, messages };
+    if (tools) body.tools = tools;
+    if (toolChoice) body.tool_choice = toolChoice;
+
+    console.log(`[ai-document-reader] -> ${model} (image=${!!imageBase64}, tools=${!!tools})`);
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -23,10 +53,7 @@ async function callOpenRouter(model: string, prompt: string, apiKey: string) {
         "HTTP-Referer": "https://lovable.dev",
         "X-Title": "Lovable Document Reader",
       },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: "user", content: prompt }],
-      }),
+      body: JSON.stringify(body),
       signal: controller.signal,
     });
     const data = await res.json().catch(() => ({}));
@@ -42,14 +69,22 @@ async function callOpenRouter(model: string, prompt: string, apiKey: string) {
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { prompt } = await req.json();
+    const body = await req.json();
+    const {
+      prompt,
+      system,
+      image_base64: imageBase64,
+      mime_type: mimeType,
+      tools,
+      tool_choice: toolChoice,
+      model,
+      fallback_model: fallbackModelOverride,
+    } = body ?? {};
 
-    if (!prompt) {
+    if (!prompt || typeof prompt !== "string") {
       return new Response(
         JSON.stringify({ error: "Prompt é obrigatório" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -59,21 +94,33 @@ serve(async (req) => {
     const apiKey = Deno.env.get("OPENROUTER_API_KEY");
     if (!apiKey) {
       return new Response(
-        JSON.stringify({ error: "OPENROUTER_API_KEY não encontrado no Supabase Secrets" }),
+        JSON.stringify({ error: "OPENROUTER_API_KEY não encontrado" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    let attempt = await callOpenRouter(PRIMARY_MODEL, prompt, apiKey);
-    let modelUsed = PRIMARY_MODEL;
+    const isVision = !!imageBase64;
+    const primary = model ?? (isVision ? DEFAULT_PRIMARY_VISION : DEFAULT_PRIMARY_TEXT);
+    const fallback = fallbackModelOverride ?? (isVision ? DEFAULT_FALLBACK_VISION : DEFAULT_FALLBACK_TEXT);
+
+    if (imageBase64) {
+      console.log(`[ai-document-reader] payload imagem ${(imageBase64.length / 1024).toFixed(1)} KB (base64)`);
+    }
+
+    const callArgs: Omit<CallArgs, "model"> = {
+      apiKey, prompt, system, imageBase64, mimeType, tools, toolChoice,
+    };
+
+    let attempt = await callOpenRouter({ model: primary, ...callArgs });
+    let modelUsed = primary;
     let primaryFailure: { status: number; data: unknown } | null = null;
 
     const shouldFallback = !attempt.ok && (attempt.timeout || FALLBACK_STATUSES.has(attempt.status));
     if (shouldFallback) {
       primaryFailure = { status: attempt.status, data: attempt.data };
       console.log(`[ai-document-reader] Fallback acionado (status=${attempt.status}, timeout=${attempt.timeout})`);
-      attempt = await callOpenRouter(FALLBACK_MODEL, prompt, apiKey);
-      modelUsed = FALLBACK_MODEL;
+      attempt = await callOpenRouter({ model: fallback, ...callArgs });
+      modelUsed = fallback;
     }
 
     if (!attempt.ok) {
@@ -90,11 +137,13 @@ serve(async (req) => {
     }
 
     const data = attempt.data as any;
+    const message = data?.choices?.[0]?.message;
     return new Response(
       JSON.stringify({
         success: true,
         model_used: modelUsed,
-        response: data?.choices?.[0]?.message?.content ?? data,
+        response: message?.content ?? null,
+        tool_calls: message?.tool_calls ?? null,
         ...(primaryFailure ? { primary_failure: primaryFailure } : {}),
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

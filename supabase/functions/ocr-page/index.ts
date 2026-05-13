@@ -1,4 +1,4 @@
-// Faz OCR de uma página usando Lovable AI (Gemini Vision) e cria time_entries
+// Faz OCR de uma página usando OpenRouter (via ai-document-reader) e cria time_entries
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -25,24 +25,71 @@ Para cada linha da folha, identifique:
 - status: "ok" se completo, "falta" se ausente, "folga", "feriado", ou "inconsistente"
 - confiança 0.0-1.0 indicando o quanto você tem certeza da leitura${ref}
 
-Retorne todas as linhas via tool calling. Se um campo (exceto data) não estiver visível, deixe null.`;
+Use a ferramenta registrar_marcacoes para retornar TODAS as linhas. Se um campo (exceto data) não estiver visível, deixe null.`;
 }
 
 function normalizarData(raw: string | null, mes: number | null, ano: number | null): string | null {
   if (!raw) return null;
   const s = String(raw).trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-  // DD/MM/YYYY
   let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (m) return `${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;
-  // DD/MM
   m = s.match(/^(\d{1,2})\/(\d{1,2})$/);
   if (m && ano) return `${ano}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;
-  // DD apenas
   m = s.match(/^(\d{1,2})$/);
   if (m && mes && ano) return `${ano}-${String(mes).padStart(2,"0")}-${m[1].padStart(2,"0")}`;
   return null;
 }
+
+async function callAIReader(payload: Record<string, unknown>) {
+  const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/ai-document-reader`;
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${serviceKey}`,
+      "apikey": serviceKey,
+    },
+    body: JSON.stringify(payload),
+  });
+  const json = await res.json().catch(() => ({}));
+  return { status: res.status, ok: res.ok, json };
+}
+
+const TOOLS = [{
+  type: "function",
+  function: {
+    name: "registrar_marcacoes",
+    description: "Registra todas as linhas/marcações lidas",
+    parameters: {
+      type: "object",
+      properties: {
+        marcacoes: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              nome: { type: "string" },
+              cpf: { type: "string" },
+              funcao: { type: "string" },
+              data: { type: "string", description: "YYYY-MM-DD" },
+              dia_semana: { type: "string" },
+              entrada: { type: "string" },
+              saida_intervalo: { type: "string" },
+              retorno_intervalo: { type: "string" },
+              saida_final: { type: "string" },
+              status: { type: "string", enum: ["ok", "falta", "folga", "feriado", "inconsistente"] },
+              confianca: { type: "number" },
+            },
+            required: ["status", "confianca"],
+          },
+        },
+      },
+      required: ["marcacoes"],
+    },
+  },
+}];
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -55,8 +102,6 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const googleKey = Deno.env.get("GOOGLE_GEMINI_API_KEY");
-    if (!googleKey) throw new Error("GOOGLE_GEMINI_API_KEY não configurada");
 
     const admin = createClient(supabaseUrl, serviceKey);
     await admin.from("timesheet_pages").update({ ocr_status: "processando" }).eq("id", page_id);
@@ -67,7 +112,6 @@ Deno.serve(async (req) => {
     const mesRef = (page as any).timesheet_batches.mes_referencia ?? null;
     const anoRef = (page as any).timesheet_batches.ano_referencia ?? null;
 
-    // Baixa o arquivo do storage e converte para base64 data URL
     const { data: blob, error: dErr } = await admin.storage.from("timesheets").download(page.image_path!);
     if (dErr) throw dErr;
     const buffer = await blob.arrayBuffer();
@@ -77,73 +121,27 @@ Deno.serve(async (req) => {
     const base64 = btoa(binary);
     const mime = blob.type || "image/jpeg";
 
-    // Chama Gemini API nativa do Google com function calling
-    const aiResp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${googleKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: buildSystemPrompt(mesRef, anoRef) }] },
-          contents: [{
-            role: "user",
-            parts: [
-              { text: "Extraia todas as marcações de ponto desta folha." },
-              { inline_data: { mime_type: mime, data: base64 } },
-            ],
-          }],
-          tools: [{
-            functionDeclarations: [{
-              name: "registrar_marcacoes",
-              description: "Registra todas as linhas/marcações lidas",
-              parameters: {
-                type: "object",
-                properties: {
-                  marcacoes: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        nome: { type: "string", nullable: true },
-                        cpf: { type: "string", nullable: true },
-                        funcao: { type: "string", nullable: true },
-                        data: { type: "string", nullable: true, description: "YYYY-MM-DD" },
-                        dia_semana: { type: "string", nullable: true },
-                        entrada: { type: "string", nullable: true },
-                        saida_intervalo: { type: "string", nullable: true },
-                        retorno_intervalo: { type: "string", nullable: true },
-                        saida_final: { type: "string", nullable: true },
-                        status: { type: "string", enum: ["ok", "falta", "folga", "feriado", "inconsistente"] },
-                        confianca: { type: "number" },
-                      },
-                      required: ["status", "confianca"],
-                    },
-                  },
-                },
-                required: ["marcacoes"],
-              },
-            }],
-          }],
-          toolConfig: { functionCallingConfig: { mode: "ANY", allowedFunctionNames: ["registrar_marcacoes"] } },
-        }),
-      },
-    );
+    const { ok, status, json } = await callAIReader({
+      system: buildSystemPrompt(mesRef, anoRef),
+      prompt: "Extraia todas as marcações de ponto desta folha e retorne via tool registrar_marcacoes.",
+      image_base64: base64,
+      mime_type: mime,
+      tools: TOOLS,
+      tool_choice: { type: "function", function: { name: "registrar_marcacoes" } },
+    });
 
-    if (!aiResp.ok) {
-      const text = await aiResp.text();
-      if (aiResp.status === 429) throw new Error("Limite de requisições do Google Gemini atingido. Tente novamente em alguns instantes.");
-      if (aiResp.status === 403) throw new Error("Chave Google Gemini inválida ou sem permissão. Verifique a chave em Settings.");
-      if (aiResp.status === 400 && text.includes("API_KEY_INVALID")) throw new Error("Chave Google Gemini inválida.");
-      throw new Error(`Google Gemini API: ${aiResp.status} ${text}`);
+    if (!ok) {
+      throw new Error(`ai-document-reader ${status}: ${JSON.stringify(json).slice(0, 500)}`);
     }
 
-    const aiJson = await aiResp.json();
-    const parts = aiJson?.candidates?.[0]?.content?.parts ?? [];
-    const fnPart = parts.find((p: any) => p?.functionCall);
-    const args = fnPart?.functionCall?.args ?? { marcacoes: [] };
+    const toolCall = json?.tool_calls?.[0];
+    let args: any = { marcacoes: [] };
+    if (toolCall?.function?.arguments) {
+      try { args = JSON.parse(toolCall.function.arguments); } catch { args = { marcacoes: [] }; }
+    }
     const marcacoes: any[] = args.marcacoes ?? [];
+    console.log(`ocr-page: model=${json.model_used} marcacoes=${marcacoes.length}`);
 
-    // Carrega funcionários existentes para matching
     const { data: existing } = await admin.from("employees").select("id, nome, cpf").eq("company_id", companyId);
     const byCpf = new Map<string, string>();
     const byNome = new Map<string, string>();
@@ -180,7 +178,6 @@ Deno.serve(async (req) => {
       const conf = typeof m.confianca === "number" ? Math.max(0, Math.min(1, m.confianca)) : 0.5;
       confSum += conf; confCount++;
 
-      // Normaliza data; se ainda nula e houver mês/ano de referência, usa dia sequencial
       let dataFinal = normalizarData(m.data ?? null, mesRef, anoRef);
       if (!dataFinal && mesRef && anoRef) {
         const ultimoDia = new Date(anoRef, mesRef, 0).getDate();
@@ -219,7 +216,6 @@ Deno.serve(async (req) => {
       confianca_media: confMedia,
     }).eq("id", page_id);
 
-    // Atualiza total de marcações no batch
     const { count } = await admin.from("time_entries").select("*", { count: "exact", head: true }).eq("batch_id", page.batch_id);
     await admin.from("timesheet_batches").update({
       total_marcacoes: count ?? 0,
@@ -229,10 +225,10 @@ Deno.serve(async (req) => {
     await admin.from("processing_logs").insert({
       batch_id: page.batch_id,
       nivel: "info",
-      mensagem: `Página ${page.numero_pagina} processada: ${entriesToInsert.length} marcações`,
+      mensagem: `Página ${page.numero_pagina} processada (modelo ${json.model_used}): ${entriesToInsert.length} marcações`,
     });
 
-    return new Response(JSON.stringify({ ok: true, count: entriesToInsert.length }), {
+    return new Response(JSON.stringify({ ok: true, count: entriesToInsert.length, model_used: json.model_used }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
