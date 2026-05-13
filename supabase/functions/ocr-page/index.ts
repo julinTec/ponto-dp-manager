@@ -121,6 +121,10 @@ Deno.serve(async (req) => {
     const base64 = btoa(binary);
     const mime = blob.type || "image/jpeg";
 
+    if (mime === "application/pdf" || (page.image_path ?? "").toLowerCase().endsWith(".pdf")) {
+      throw new Error("PDF não suportado por modelos de visão gratuitos do OpenRouter. Suba a folha como JPG/PNG (ou converta cada página do PDF em imagem antes de enviar).");
+    }
+
     const { ok, status, json } = await callAIReader({
       system: buildSystemPrompt(mesRef, anoRef),
       prompt: "Extraia todas as marcações de ponto desta folha e retorne via tool registrar_marcacoes.",
