@@ -5,17 +5,18 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const DEFAULT_PRIMARY_TEXT = "google/gemma-4-31b-it:free";
-const DEFAULT_FALLBACK_TEXT = "openai/gpt-oss-120b:free";
-const DEFAULT_PRIMARY_VISION = "meta-llama/llama-3.2-11b-vision-instruct:free";
-const DEFAULT_FALLBACK_VISION = "qwen/qwen2.5-vl-72b-instruct:free";
-// PDFs são pré-processados pelo plugin file-parser (cloudflare-ai, free), então
-// um modelo de texto qualquer atende.
-const DEFAULT_PRIMARY_PDF = "google/gemma-4-31b-it:free";
-const DEFAULT_FALLBACK_PDF = "openai/gpt-oss-120b:free";
+// Cascata de modelos free do OpenRouter — tentados na ordem até um funcionar
+const MODEL_CASCADE: string[] = [
+  "google/gemma-4-31b-it:free",
+  "google/gemma-4-26b-a4b-it:free",
+  "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+  "nvidia/nemotron-nano-12b-v2-vl:free",
+  "baidu/qianfan-ocr-fast:free",
+  "openrouter/free",
+];
 
-// Inclui 400/404/500 (modelo indisponível/sem endpoints/erro do provedor) além dos transientes
-const FALLBACK_STATUSES = new Set([400, 404, 429, 500, 502, 503, 504]);
+// Status que disparam fallback para o próximo modelo
+const FALLBACK_STATUSES = new Set([400, 402, 404, 408, 409, 429, 500, 502, 503, 504]);
 const TIMEOUT_MS = 60_000;
 
 type Route = "text" | "image" | "pdf";
@@ -68,7 +69,6 @@ async function callOpenRouter(args: CallArgs) {
       body.plugins = [{ id: "file-parser", pdf: { engine: "cloudflare-ai" } }];
     }
 
-    console.log(`[ai-document-reader] -> ${model} (route=${route}, tools=${!!tools})`);
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -81,11 +81,9 @@ async function callOpenRouter(args: CallArgs) {
       signal: controller.signal,
     });
     const data = await res.json().catch(() => ({}));
-    console.log(`[ai-document-reader] ${model} -> HTTP ${res.status}`);
     return { ok: res.ok, status: res.status, data, timeout: false };
   } catch (err) {
     const isTimeout = (err as Error).name === "AbortError";
-    console.log(`[ai-document-reader] ${model} -> erro: ${(err as Error).message} (timeout=${isTimeout})`);
     return { ok: false, status: isTimeout ? 504 : 0, data: { error: (err as Error).message }, timeout: isTimeout };
   } finally {
     clearTimeout(timeoutId);
@@ -125,67 +123,73 @@ serve(async (req) => {
       );
     }
 
-    // Determina rota a partir do mime_type (PDF tem prioridade) ou da presença de imagem
     const fileBase64 = fileBase64Input ?? imageBase64;
     const isPdf = (mimeType ?? "").toLowerCase() === "application/pdf"
       || (filename ?? "").toLowerCase().endsWith(".pdf");
-    const route: Route = isPdf
-      ? "pdf"
-      : (fileBase64 ? "image" : "text");
+    const route: Route = isPdf ? "pdf" : (fileBase64 ? "image" : "text");
 
-    const defaults = route === "pdf"
-      ? { p: DEFAULT_PRIMARY_PDF, f: DEFAULT_FALLBACK_PDF }
-      : route === "image"
-        ? { p: DEFAULT_PRIMARY_VISION, f: DEFAULT_FALLBACK_VISION }
-        : { p: DEFAULT_PRIMARY_TEXT, f: DEFAULT_FALLBACK_TEXT };
-
-    const primary = model ?? defaults.p;
-    const fallback = fallbackModelOverride ?? defaults.f;
+    // Constrói cascata: modelos custom do cliente primeiro (se houver), depois a lista padrão.
+    const cascade: string[] = [];
+    if (typeof model === "string" && model) cascade.push(model);
+    if (typeof fallbackModelOverride === "string" && fallbackModelOverride) cascade.push(fallbackModelOverride);
+    for (const m of MODEL_CASCADE) {
+      if (!cascade.includes(m)) cascade.push(m);
+    }
 
     if (fileBase64) {
-      console.log(`[ai-document-reader] payload ${route} ${(fileBase64.length / 1024).toFixed(1)} KB (base64)`);
+      console.log(`[ai-document-reader] route=${route} payload=${(fileBase64.length / 1024).toFixed(1)}KB cascade=${cascade.length}`);
     }
 
     const callArgs: Omit<CallArgs, "model"> = {
       apiKey, prompt, system, route, fileBase64, mimeType, filename, tools, toolChoice,
     };
 
-    let attempt = await callOpenRouter({ model: primary, ...callArgs });
-    let modelUsed = primary;
-    let primaryFailure: { status: number; data: unknown } | null = null;
+    const attempts: Array<{ model: string; status: number; error?: unknown }> = [];
+    let success: { model: string; data: any } | null = null;
 
-    const shouldFallback = !attempt.ok && (attempt.timeout || FALLBACK_STATUSES.has(attempt.status));
-    if (shouldFallback) {
-      primaryFailure = { status: attempt.status, data: attempt.data };
-      console.log(`[ai-document-reader] Fallback acionado (status=${attempt.status}, timeout=${attempt.timeout})`);
-      attempt = await callOpenRouter({ model: fallback, ...callArgs });
-      modelUsed = fallback;
+    for (let i = 0; i < cascade.length; i++) {
+      const m = cascade[i];
+      console.log(`[ai-document-reader] -> ${m} (tentativa ${i + 1}/${cascade.length}, route=${route})`);
+      const attempt = await callOpenRouter({ model: m, ...callArgs });
+      console.log(`[ai-document-reader] ${m} -> HTTP ${attempt.status} ${attempt.ok ? "OK" : "FAIL"}`);
+
+      if (attempt.ok) {
+        success = { model: m, data: attempt.data };
+        break;
+      }
+
+      attempts.push({ model: m, status: attempt.status, error: attempt.data });
+
+      const recoverable = attempt.timeout || FALLBACK_STATUSES.has(attempt.status) || attempt.status === 0;
+      if (!recoverable) {
+        // erro não recuperável (ex: 401/403) — para imediatamente
+        console.log(`[ai-document-reader] ${m} -> status ${attempt.status} não recuperável, abortando cascata`);
+        break;
+      }
     }
 
-    if (!attempt.ok) {
+    if (!success) {
+      const last = attempts[attempts.length - 1];
       return new Response(
         JSON.stringify({
-          error: "Erro OpenRouter",
-          status: attempt.status,
+          error: "Todos os modelos falharam",
+          status: last?.status ?? 500,
           route,
-          model_attempted: modelUsed,
-          details: attempt.data,
-          primary_failure: primaryFailure,
+          attempts,
         }),
-        { status: attempt.status || 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: last?.status || 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const data = attempt.data as any;
-    const message = data?.choices?.[0]?.message;
+    const message = success.data?.choices?.[0]?.message;
     return new Response(
       JSON.stringify({
         success: true,
         route,
-        model_used: modelUsed,
+        model_used: success.model,
         response: message?.content ?? null,
         tool_calls: message?.tool_calls ?? null,
-        ...(primaryFailure ? { primary_failure: primaryFailure } : {}),
+        attempts,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
