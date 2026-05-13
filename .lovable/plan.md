@@ -1,58 +1,45 @@
 ## Objetivo
 
-Reaproveitar o fluxo da função `ai-document-reader` (OpenRouter + fallback automático + logs) nas três funções de OCR do sistema, usando modelos com visão.
+Quando o arquivo for **PDF**, usar uma "rota" diferente no `ai-document-reader`: ativar o plugin oficial `file-parser` da OpenRouter (engine `cloudflare-ai`, free) e mandar para um modelo de texto. Quando for **imagem**, manter a rota atual com modelos de visão.
 
-## Modelos escolhidos (free, com visão)
+## Como vai ficar a `ai-document-reader`
 
-- Principal: `google/gemini-2.0-flash-exp:free`
-- Fallback: `meta-llama/llama-3.2-11b-vision-instruct:free`
+Três rotas, escolhidas a partir do `mime_type` recebido:
 
-Fallback dispara em 429/502/503/504/timeout, igual já está hoje na `ai-document-reader`.
+1. **Texto puro** (sem imagem/PDF):
+   - Principal: `google/gemma-4-31b-it:free`
+   - Fallback: `openai/gpt-oss-120b:free`
 
-## Mudanças
+2. **Imagem** (`image/jpeg`, `image/png`, etc.):
+   - Principal: `meta-llama/llama-3.2-11b-vision-instruct:free`
+   - Fallback: `qwen/qwen2.5-vl-72b-instruct:free`
+   - Envia como `image_url` (data URL base64) — igual hoje.
 
-### 1. `supabase/functions/ai-document-reader/index.ts` — evoluir
-- Aceitar no body: `prompt`, `image_base64?`, `mime_type?`, `tools?`, `tool_choice?`, `model?`, `fallback_model?`, `system?`.
-- Quando vier `image_base64`, montar `messages` no formato OpenAI multimodal:
-  ```
-  [{ role: "user", content: [
-      { type: "text", text: prompt },
-      { type: "image_url", image_url: { url: "data:<mime>;base64,..." } }
-  ]}]
-  ```
-- Quando vier `tools`, repassar para o OpenRouter e devolver `tool_calls` no JSON final.
-- Manter resposta: `{ success, model_used, response, tool_calls?, primary_failure? }`.
-- Manter logs detalhados, fallback, tratamento de erro e secret `OPENROUTER_API_KEY`.
-- Para uso interno por outras edge functions, aceitar request sem JWT (já está com `verify_jwt = false` por padrão).
+3. **PDF** (`application/pdf`) — NOVA rota:
+   - Principal: `google/gemma-4-31b-it:free`
+   - Fallback: `openai/gpt-oss-120b:free`
+   - Conteúdo enviado como `{ type: "file", file: { filename, file_data: "data:application/pdf;base64,..." } }`
+   - Adiciona ao body: `plugins: [{ id: "file-parser", pdf: { engine: "cloudflare-ai" } }]`
+   - O plugin converte o PDF em texto antes do modelo, então qualquer modelo de texto funciona.
 
-### 2. `supabase/functions/ocr-page/index.ts` — refatorar
-- Remover `GOOGLE_GEMINI_API_KEY` e a chamada direta ao `generativelanguage.googleapis.com`.
-- Continuar baixando a imagem do bucket `timesheets` e gerando base64.
-- Chamar `ai-document-reader` via `supabase.functions.invoke` (com service role) passando: `prompt` (system + instrução), imagem, e `tools` no formato OpenAI traduzido do schema atual `registrar_marcacoes`.
-- Ler `tool_calls[0].function.arguments` (JSON) → `marcacoes[]` e popular `time_entries` exatamente como hoje.
-- Em erro: gravar `ocr_status = "falhou"` e a `mensagem` (incluindo `model_used` e `primary_failure` quando houver).
+Mantém: fallback automático em 400/404/429/500/502/503/504/timeout, logs detalhados, secret `OPENROUTER_API_KEY`, mesma estrutura de resposta `{ success, model_used, response, tool_calls?, primary_failure? }`.
 
-### 3. `supabase/functions/ocr-admission-doc/index.ts` — refatorar
-- Mesma lógica: tirar Gemini direto, chamar `ai-document-reader` com a imagem e a tool `extrair_dados_admissao` (convertida para formato OpenAI).
-- Gravar `dados_extraidos`, `confianca`, `checklist_status` e fazer o merge no `employee_admissions.dados_extraidos` exatamente como hoje.
+Adiciona no log: `route` (`text` / `image` / `pdf`) para facilitar diagnóstico.
 
-### 4. `supabase/functions/ocr-employee-doc/index.ts` — refatorar
-- Mesma lógica: chamar `ai-document-reader` com a tool atual de extração de dados do funcionário.
+## Mudanças nas funções de OCR
 
-## O que NÃO muda
-
-- Frontend (Lotes, Revisão, Admissões, Funcionários, Documentos) — chamadas e UX continuam iguais.
-- Tabelas, RLS, triggers — sem migrações.
-- `gemini-proxy` e página `/gemini` — deixadas como estão (testes).
-- Página `/ai-test` — continua funcionando para prompts de texto puro.
+- **`ocr-page`**: remover o bloqueio de PDF que adicionei agora — voltar a aceitar PDF normalmente. O `mime_type` já é detectado e enviado para `ai-document-reader`, que escolhe a rota.
+- **`ocr-admission-doc`** e **`ocr-employee-doc`**: nenhuma mudança — eles já mandam `mime_type` e vão se beneficiar automaticamente da rota PDF.
 
 ## Validação
 
-- Deploy das 4 funções (`ai-document-reader` + 3 OCRs).
-- Teste rápido via `curl_edge_functions` no `ai-document-reader` com uma imagem pequena base64 + tool, para confirmar tool_calls voltando.
-- O teste real de OCR (com folha de ponto) você faz pela tela de Lotes, e eu valido pelos logs da função.
+- Deploy de `ai-document-reader` e `ocr-page`.
+- Teste rápido via `curl_edge_functions` mandando um PDF pequeno em base64 para a `ai-document-reader` com tool calling, conferindo `tool_calls` no retorno.
+- Você reprocessa o lote atual (FREQUENCIA_ABRIL.pdf) e eu valido pelos logs.
 
-## Riscos
+## Riscos / observações
 
-- Modelos free de visão no OpenRouter podem ter qualidade inferior na leitura de manuscritos comparado ao `gemini-2.5-flash` pago. Se a precisão cair, posso facilmente trocar para `google/gemini-2.5-flash` (pago) mudando uma constante.
-- Limites de payload: imagens grandes em base64 podem aproximar do limite da edge function. Vou logar o tamanho para acompanharmos.
+- O parser `cloudflare-ai` produz markdown. Para folhas de ponto manuscritas a qualidade depende de quanto o cloudflare-ai consegue extrair de um scan. Se ficar fraco, podemos trocar para `mistral-ocr` (pago, mas barato — ~$1 por 1.000 páginas) só na rota PDF.
+- Limite de payload da edge function continua valendo: PDFs muito grandes (vários MB em base64) podem dar timeout. Vou logar o tamanho.
+
+Posso seguir?
