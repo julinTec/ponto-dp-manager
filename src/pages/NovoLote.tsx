@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Upload, Loader2, FileText, X, FileUp, FileStack } from "lucide-react";
 import { CompanyPicker } from "@/components/CompanyFilter";
 import { toast } from "sonner";
+import { pdfFileToImages } from "@/lib/pdfToImages";
 
 const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
@@ -59,7 +60,25 @@ export default function NovoLote() {
       .single();
     if (bErr) throw bErr;
 
+    // Expande PDFs em N imagens (1 por página) ANTES do upload, para que o OCR
+    // sempre receba imagem (a rota PDF do parser grátis falha em scans).
+    const expandidos: File[] = [];
     for (const file of arquivos) {
+      if (file.type === "application/pdf" || /\.pdf$/i.test(file.name)) {
+        try {
+          const pages = await pdfFileToImages(file);
+          if (pages.length === 0) throw new Error("PDF sem páginas");
+          for (const p of pages) expandidos.push(p.file);
+        } catch (err: any) {
+          console.error("pdfFileToImages", err);
+          throw new Error(`Falha ao converter PDF "${file.name}": ${err?.message ?? err}`);
+        }
+      } else {
+        expandidos.push(file);
+      }
+    }
+
+    for (const file of expandidos) {
       const path = `${company_id}/${batch.id}/${crypto.randomUUID()}-${file.name}`;
       const { error: upErr } = await supabase.storage.from("timesheets").upload(path, file, { contentType: file.type });
       if (upErr) throw upErr;
