@@ -15,7 +15,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const apiKey = Deno.env.get("GEMINI_API_KEY") ?? Deno.env.get("GOOGLE_GEMINI_API_KEY");
+    const apiKey = Deno.env.get("GEMINI_API_KEY");
     if (!apiKey) {
       return new Response(JSON.stringify({ error: "GEMINI_API_KEY não configurada" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -42,12 +42,15 @@ Deno.serve(async (req) => {
     }
 
     const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
+        },
         body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          contents: [{ parts: [{ text: prompt }] }],
         }),
       },
     );
@@ -56,28 +59,14 @@ Deno.serve(async (req) => {
       const errText = await resp.text();
       console.error("Gemini API error:", resp.status, errText);
 
-      let upstreamMessage = "";
-      let upstreamStatus = "";
-      try {
-        const parsed = JSON.parse(errText);
-        upstreamMessage = parsed?.error?.message ?? "";
-        upstreamStatus = parsed?.error?.status ?? "";
-      } catch {
-        upstreamMessage = errText;
-      }
+      let upstreamJson: any = null;
+      try { upstreamJson = JSON.parse(errText); } catch { /* não é JSON */ }
 
-      let msg = `Erro Gemini (${resp.status})`;
-      if (resp.status === 429) {
-        msg = "Limite de requisições atingido. Tente novamente em instantes.";
-      } else if (resp.status === 401) {
-        msg = "Chave Gemini inválida.";
-      } else if (resp.status === 403) {
-        msg = upstreamStatus === "PERMISSION_DENIED" || upstreamMessage.includes("denied access")
-          ? "O projeto Google vinculado à chave foi bloqueado ou não tem acesso à Gemini API. Gere uma nova chave em outro projeto Google com a Generative Language API habilitada."
-          : "A chave Gemini não tem permissão para acessar este modelo.";
-      }
-
-      return new Response(JSON.stringify({ error: msg }), {
+      return new Response(JSON.stringify({
+        error: `Erro Gemini (${resp.status})`,
+        status: resp.status,
+        googleResponse: upstreamJson ?? errText,
+      }), {
         status: resp.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
