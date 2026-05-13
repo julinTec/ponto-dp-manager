@@ -125,8 +125,9 @@ Deno.serve(async (req) => {
     const { ok, status, json } = await callAIReader({
       system: buildSystemPrompt(mesRef, anoRef),
       prompt: "Extraia todas as marcações de ponto desta folha e retorne via tool registrar_marcacoes.",
-      image_base64: base64,
+      file_base64: base64,
       mime_type: mime,
+      filename,
       tools: TOOLS,
       tool_choice: { type: "function", function: { name: "registrar_marcacoes" } },
     });
