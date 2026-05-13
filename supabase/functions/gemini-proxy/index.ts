@@ -55,9 +55,28 @@ Deno.serve(async (req) => {
     if (!resp.ok) {
       const errText = await resp.text();
       console.error("Gemini API error:", resp.status, errText);
+
+      let upstreamMessage = "";
+      let upstreamStatus = "";
+      try {
+        const parsed = JSON.parse(errText);
+        upstreamMessage = parsed?.error?.message ?? "";
+        upstreamStatus = parsed?.error?.status ?? "";
+      } catch {
+        upstreamMessage = errText;
+      }
+
       let msg = `Erro Gemini (${resp.status})`;
-      if (resp.status === 429) msg = "Limite de requisições atingido. Tente novamente em instantes.";
-      else if (resp.status === 401 || resp.status === 403) msg = "Chave Gemini inválida ou sem permissão.";
+      if (resp.status === 429) {
+        msg = "Limite de requisições atingido. Tente novamente em instantes.";
+      } else if (resp.status === 401) {
+        msg = "Chave Gemini inválida.";
+      } else if (resp.status === 403) {
+        msg = upstreamStatus === "PERMISSION_DENIED" || upstreamMessage.includes("denied access")
+          ? "O projeto Google vinculado à chave foi bloqueado ou não tem acesso à Gemini API. Gere uma nova chave em outro projeto Google com a Generative Language API habilitada."
+          : "A chave Gemini não tem permissão para acessar este modelo.";
+      }
+
       return new Response(JSON.stringify({ error: msg }), {
         status: resp.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
