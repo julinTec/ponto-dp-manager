@@ -1,51 +1,36 @@
-## Problema identificado
-O erro real não está no modelo em si.
+## Objetivo
+Substituir a lista atual de modelos OpenRouter por uma cascata de **6 modelos free** fornecida pelo usuário, tentando-os na ordem até um responder com sucesso. Aplica-se às rotas `image`, `text` e `pdf` do `ai-document-reader`.
 
-- O lote atual falhou em `ocr-page` com `ai-document-reader 400`.
-- O `ai-document-reader` tentou a rota `pdf` com `google/gemma-4-31b-it:free` e fallback `openai/gpt-oss-120b:free`.
-- Ambos falharam com a mesma resposta do OpenRouter: `Failed to parse ...pdf`.
-- Isso indica falha no pré-processamento do PDF, antes da inferência do modelo; portanto, adicionar “um terceiro modelo free” para PDF não resolve esse caso.
-- Além disso, a tela de revisão hoje tenta renderizar o arquivo com `<img>`, então quando a página é um PDF ela pode ficar sem prévia visual.
+## Ordem de fallback (cascata)
+1. `google/gemma-4-31b-it:free`
+2. `google/gemma-4-26b-a4b-it:free`
+3. `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free`
+4. `nvidia/nemotron-nano-12b-v2-vl:free`
+5. `baidu/qianfan-ocr-fast:free`
+6. `openrouter/free`
 
-## Solução proposta
-Trocar a estratégia de PDF no fluxo de lotes:
+A cada falha (timeout, 400/404/429/5xx), passa para o próximo. Só retorna erro ao cliente se **todos os 6** falharem — incluindo no resposta os detalhes do último erro e o histórico de falhas.
 
-1. Converter PDFs em imagens por página no upload
-   - Quando o usuário subir um PDF em **Novo Lote**, o app converte cada página em PNG/JPG.
-   - Cada página convertida passa a entrar no fluxo como imagem normal.
-   - Assim, o OCR usa a rota de visão que já funciona com modelos free.
-
-2. Ajustar o processamento do lote para múltiplas páginas reais
-   - O fluxo deixará de assumir “1 arquivo = 1 página”.
-   - PDFs passam a gerar várias páginas derivadas, cada uma com sua imagem própria.
-   - Imagens comuns continuam com o comportamento atual.
-
-3. Corrigir a tela de revisão
-   - A revisão passa a exibir corretamente páginas de lote convertidas em imagem.
-   - Se existir algum item antigo em PDF bruto, a interface mostrará estado/erro claro em vez de ficar “em branco”.
-
-4. Fortalecer mensagens de erro e rastreio
-   - Registrar claramente quando o PDF falhar por parsing externo.
-   - Exibir feedback útil para o usuário em vez de parecer que “não surgiu nada”.
-
-## Arquivos que pretendo ajustar
-- `src/pages/NovoLote.tsx`
-- `src/pages/Revisao.tsx`
-- `supabase/functions/process-batch/index.ts`
-- `supabase/functions/ocr-page/index.ts`
+## Arquivo a alterar
 - `supabase/functions/ai-document-reader/index.ts`
-- possivelmente `package.json` para adicionar a biblioteca de renderização de PDF no cliente
 
-## Detalhes técnicos
-- Usarei uma biblioteca de PDF no frontend para renderizar cada página em canvas e exportar imagem.
-- O OCR continuará centralizado no fluxo atual, mas receberá imagens em vez de PDF bruto para lotes.
-- Vou preservar o comportamento de imagens simples e refatorar apenas o necessário para PDFs.
-- Também vou manter compatibilidade com os dados atuais, tratando lotes antigos com mensagem adequada quando o arquivo original ainda for PDF bruto.
+## Mudanças técnicas
+1. Remover constantes `DEFAULT_PRIMARY_*` / `DEFAULT_FALLBACK_*` e substituir por uma única const `MODEL_CASCADE: string[]` com os 6 modelos acima (mesma ordem para `text`, `image` e `pdf`, já que são todos free e alguns suportam visão/OCR).
+2. Substituir o bloco "primary → 1 fallback" por um **loop** que percorre `MODEL_CASCADE`:
+   - Para cada modelo, chama `callOpenRouter`.
+   - Se OK → retorna sucesso com `model_used` e `attempts` (lista de `{model, status}` falhos).
+   - Se falha em status `FALLBACK_STATUSES` ou timeout → registra falha e tenta o próximo.
+   - Se falha em status NÃO recuperável (ex.: 401/403) → para imediatamente e retorna erro.
+3. Manter os parâmetros opcionais `model` e `fallback_model` do body: se o cliente passar `model`, ele é colocado no início da cascata (e o resto serve como fallback).
+4. Manter rota `pdf` com plugin `file-parser` (continua funcionando para clientes que ainda enviem PDF bruto, mesmo que o front já converta para imagem).
+5. Manter logs `[ai-document-reader] -> modelo (tentativa N/6)` para facilitar debug.
+6. Resposta de erro final inclui `attempts: [{model, status, error}]` para diagnóstico.
 
-## Resultado esperado
-Depois da implementação:
+## Validação
+- Reprocessar o lote pendente e checar logs do `ai-document-reader`: deve listar tentativas até encontrar um modelo que funcione.
+- Conferir `timesheet_pages.ocr_status = 'concluido'` e `marks_count > 0`.
+- Confirmar na tela de revisão que as marcações aparecem.
 
-- subir PDF em **Lotes** passa a gerar páginas visíveis na revisão;
-- o OCR deixa de depender do parser grátis de PDF do OpenRouter para esse fluxo;
-- o sistema volta a extrair dados usando os modelos free já configurados para imagem;
-- o usuário não fica mais sem retorno visual quando o arquivo for PDF.
+## Fora de escopo
+- Nenhuma mudança em `ocr-page`, `process-batch`, frontend ou conversão de PDF (que já funciona).
+- Sem alteração de UI.
