@@ -92,7 +92,8 @@ Use a ferramenta extrair_dados_documento para retornar. Indique a confianca_gera
     const { ok, status, json } = await callAIReader({
       system: sysPrompt,
       prompt: "Extraia os dados solicitados deste documento via tool extrair_dados_documento.",
-      image_base64: base64,
+      file_base64: base64,
+      filename: (doc.storage_path ?? "").split("/").pop() || "document",
       mime_type: mime,
       tools: TOOLS,
       tool_choice: { type: "function", function: { name: "extrair_dados_documento" } },
