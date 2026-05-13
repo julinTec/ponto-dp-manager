@@ -9,33 +9,53 @@ const DEFAULT_PRIMARY_TEXT = "google/gemma-4-31b-it:free";
 const DEFAULT_FALLBACK_TEXT = "openai/gpt-oss-120b:free";
 const DEFAULT_PRIMARY_VISION = "meta-llama/llama-3.2-11b-vision-instruct:free";
 const DEFAULT_FALLBACK_VISION = "qwen/qwen2.5-vl-72b-instruct:free";
+// PDFs são pré-processados pelo plugin file-parser (cloudflare-ai, free), então
+// um modelo de texto qualquer atende.
+const DEFAULT_PRIMARY_PDF = "google/gemma-4-31b-it:free";
+const DEFAULT_FALLBACK_PDF = "openai/gpt-oss-120b:free";
 
-// Inclui 400/404 (modelo indisponível/sem endpoints) além dos transientes
+// Inclui 400/404/500 (modelo indisponível/sem endpoints/erro do provedor) além dos transientes
 const FALLBACK_STATUSES = new Set([400, 404, 429, 500, 502, 503, 504]);
 const TIMEOUT_MS = 60_000;
+
+type Route = "text" | "image" | "pdf";
 
 interface CallArgs {
   model: string;
   apiKey: string;
   prompt: string;
   system?: string;
-  imageBase64?: string;
+  route: Route;
+  fileBase64?: string;
   mimeType?: string;
+  filename?: string;
   tools?: unknown;
   toolChoice?: unknown;
 }
 
 async function callOpenRouter(args: CallArgs) {
-  const { model, apiKey, prompt, system, imageBase64, mimeType, tools, toolChoice } = args;
+  const { model, apiKey, prompt, system, route, fileBase64, mimeType, filename, tools, toolChoice } = args;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    const userContent: any = imageBase64
-      ? [
-          { type: "text", text: prompt },
-          { type: "image_url", image_url: { url: `data:${mimeType ?? "image/jpeg"};base64,${imageBase64}` } },
-        ]
-      : prompt;
+    let userContent: any = prompt;
+    if (route === "image" && fileBase64) {
+      userContent = [
+        { type: "text", text: prompt },
+        { type: "image_url", image_url: { url: `data:${mimeType ?? "image/jpeg"};base64,${fileBase64}` } },
+      ];
+    } else if (route === "pdf" && fileBase64) {
+      userContent = [
+        { type: "text", text: prompt },
+        {
+          type: "file",
+          file: {
+            filename: filename ?? "document.pdf",
+            file_data: `data:application/pdf;base64,${fileBase64}`,
+          },
+        },
+      ];
+    }
 
     const messages: any[] = [];
     if (system) messages.push({ role: "system", content: system });
@@ -44,8 +64,11 @@ async function callOpenRouter(args: CallArgs) {
     const body: Record<string, unknown> = { model, messages };
     if (tools) body.tools = tools;
     if (toolChoice) body.tool_choice = toolChoice;
+    if (route === "pdf") {
+      body.plugins = [{ id: "file-parser", pdf: { engine: "cloudflare-ai" } }];
+    }
 
-    console.log(`[ai-document-reader] -> ${model} (image=${!!imageBase64}, tools=${!!tools})`);
+    console.log(`[ai-document-reader] -> ${model} (route=${route}, tools=${!!tools})`);
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -78,7 +101,9 @@ serve(async (req) => {
       prompt,
       system,
       image_base64: imageBase64,
+      file_base64: fileBase64Input,
       mime_type: mimeType,
+      filename,
       tools,
       tool_choice: toolChoice,
       model,
@@ -100,16 +125,29 @@ serve(async (req) => {
       );
     }
 
-    const isVision = !!imageBase64;
-    const primary = model ?? (isVision ? DEFAULT_PRIMARY_VISION : DEFAULT_PRIMARY_TEXT);
-    const fallback = fallbackModelOverride ?? (isVision ? DEFAULT_FALLBACK_VISION : DEFAULT_FALLBACK_TEXT);
+    // Determina rota a partir do mime_type (PDF tem prioridade) ou da presença de imagem
+    const fileBase64 = fileBase64Input ?? imageBase64;
+    const isPdf = (mimeType ?? "").toLowerCase() === "application/pdf"
+      || (filename ?? "").toLowerCase().endsWith(".pdf");
+    const route: Route = isPdf
+      ? "pdf"
+      : (fileBase64 ? "image" : "text");
 
-    if (imageBase64) {
-      console.log(`[ai-document-reader] payload imagem ${(imageBase64.length / 1024).toFixed(1)} KB (base64)`);
+    const defaults = route === "pdf"
+      ? { p: DEFAULT_PRIMARY_PDF, f: DEFAULT_FALLBACK_PDF }
+      : route === "image"
+        ? { p: DEFAULT_PRIMARY_VISION, f: DEFAULT_FALLBACK_VISION }
+        : { p: DEFAULT_PRIMARY_TEXT, f: DEFAULT_FALLBACK_TEXT };
+
+    const primary = model ?? defaults.p;
+    const fallback = fallbackModelOverride ?? defaults.f;
+
+    if (fileBase64) {
+      console.log(`[ai-document-reader] payload ${route} ${(fileBase64.length / 1024).toFixed(1)} KB (base64)`);
     }
 
     const callArgs: Omit<CallArgs, "model"> = {
-      apiKey, prompt, system, imageBase64, mimeType, tools, toolChoice,
+      apiKey, prompt, system, route, fileBase64, mimeType, filename, tools, toolChoice,
     };
 
     let attempt = await callOpenRouter({ model: primary, ...callArgs });
@@ -129,6 +167,7 @@ serve(async (req) => {
         JSON.stringify({
           error: "Erro OpenRouter",
           status: attempt.status,
+          route,
           model_attempted: modelUsed,
           details: attempt.data,
           primary_failure: primaryFailure,
@@ -142,6 +181,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
+        route,
         model_used: modelUsed,
         response: message?.content ?? null,
         tool_calls: message?.tool_calls ?? null,
