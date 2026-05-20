@@ -30,13 +30,26 @@ export default function Auth() {
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data: signIn, error } = await supabase.auth.signInWithPassword({
       email: parsed.data.email,
       password: parsed.data.password,
     });
+    if (error || !signIn.user) {
+      setLoading(false);
+      return toast.error("E-mail ou senha inválidos");
+    }
+    // Decide destino conforme role
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", signIn.user.id);
     setLoading(false);
-    if (error) return toast.error("E-mail ou senha inválidos");
-    navigate("/");
+    const list = (roles ?? []).map((r: any) => r.role as string);
+    if (list.includes("funcionario") && !list.some((r) => ["admin", "super_admin", "revisor"].includes(r))) {
+      navigate("/ponto");
+    } else {
+      navigate("/");
+    }
   }
 
   return (

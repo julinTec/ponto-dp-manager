@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, FileStack, Users, FileBarChart2, Shield, LogOut, Clock, UserCog, UserPlus, FileText } from "lucide-react";
+import { LayoutDashboard, FileStack, Users, FileBarChart2, Shield, LogOut, Clock, UserCog, UserPlus, FileText, Building2, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { signOut, useAuth } from "@/hooks/useAuth";
@@ -12,6 +12,11 @@ const NAV = [
   { to: "/funcionarios", label: "Funcionários", icon: Users },
   { to: "/documentos", label: "Documentos", icon: FileText },
   { to: "/relatorios", label: "Relatórios", icon: FileBarChart2 },
+];
+
+const PONTO_NAV = [
+  { to: "/gestor/empresa", label: "Empresa", icon: Building2 },
+  { to: "/gestor/relatorios-ponto", label: "Relatórios de ponto", icon: MapPin },
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {
@@ -53,6 +58,28 @@ export function AppLayout({ children }: { children: ReactNode }) {
               </NavLink>
             );
           })}
+          <div className="pt-3 mt-2 border-t border-sidebar-border/40">
+            <p className="px-3 pb-1 text-[10px] uppercase tracking-wide text-sidebar-foreground/50">Ponto geolocalizado</p>
+            {PONTO_NAV.map((item) => {
+              const Icon = item.icon;
+              const active = location.pathname.startsWith(item.to);
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                    active
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                </NavLink>
+              );
+            })}
+          </div>
           {(isAdmin || isSuperAdmin) && (
             <NavLink
               to="/usuarios"

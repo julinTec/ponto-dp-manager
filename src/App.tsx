@@ -19,8 +19,15 @@ import SuperAdmin from "./pages/SuperAdmin";
 import NotFound from "./pages/NotFound.tsx";
 import GeminiTest from "./pages/GeminiTest";
 import AiTest from "./pages/AiTest";
+import Empresa from "./pages/gestor/Empresa";
+import RelatoriosPonto from "./pages/gestor/RelatoriosPonto";
+import BaterPonto from "./pages/funcionario/BaterPonto";
+import MeuHistorico from "./pages/funcionario/MeuHistorico";
 
 const queryClient = new QueryClient();
+
+const GESTOR = ["super_admin", "admin", "revisor"] as const;
+const FUNC = ["funcionario"] as const;
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -30,17 +37,26 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/auth" element={<Auth />} />
-          <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/lotes" element={<ProtectedRoute><Lotes /></ProtectedRoute>} />
-          <Route path="/lotes/novo" element={<ProtectedRoute><NovoLote /></ProtectedRoute>} />
-          <Route path="/lotes/:id/revisao" element={<ProtectedRoute><Revisao /></ProtectedRoute>} />
-          <Route path="/funcionarios" element={<ProtectedRoute><Funcionarios /></ProtectedRoute>} />
-          <Route path="/relatorios" element={<ProtectedRoute><Relatorios /></ProtectedRoute>} />
-          <Route path="/admissoes" element={<ProtectedRoute><Admissoes /></ProtectedRoute>} />
-          <Route path="/admissoes/:id" element={<ProtectedRoute><AdmissaoDetalhe /></ProtectedRoute>} />
-          <Route path="/documentos" element={<ProtectedRoute><Documentos /></ProtectedRoute>} />
-          <Route path="/usuarios" element={<ProtectedRoute><Usuarios /></ProtectedRoute>} />
-          <Route path="/admin" element={<ProtectedRoute><SuperAdmin /></ProtectedRoute>} />
+
+          {/* Funcionário */}
+          <Route path="/ponto" element={<ProtectedRoute allow={[...FUNC]}><BaterPonto /></ProtectedRoute>} />
+          <Route path="/meu-historico" element={<ProtectedRoute allow={[...FUNC]}><MeuHistorico /></ProtectedRoute>} />
+
+          {/* Gestor */}
+          <Route path="/" element={<ProtectedRoute allow={[...GESTOR]}><Dashboard /></ProtectedRoute>} />
+          <Route path="/lotes" element={<ProtectedRoute allow={[...GESTOR]}><Lotes /></ProtectedRoute>} />
+          <Route path="/lotes/novo" element={<ProtectedRoute allow={[...GESTOR]}><NovoLote /></ProtectedRoute>} />
+          <Route path="/lotes/:id/revisao" element={<ProtectedRoute allow={[...GESTOR]}><Revisao /></ProtectedRoute>} />
+          <Route path="/funcionarios" element={<ProtectedRoute allow={[...GESTOR]}><Funcionarios /></ProtectedRoute>} />
+          <Route path="/relatorios" element={<ProtectedRoute allow={[...GESTOR]}><Relatorios /></ProtectedRoute>} />
+          <Route path="/admissoes" element={<ProtectedRoute allow={[...GESTOR]}><Admissoes /></ProtectedRoute>} />
+          <Route path="/admissoes/:id" element={<ProtectedRoute allow={[...GESTOR]}><AdmissaoDetalhe /></ProtectedRoute>} />
+          <Route path="/documentos" element={<ProtectedRoute allow={[...GESTOR]}><Documentos /></ProtectedRoute>} />
+          <Route path="/usuarios" element={<ProtectedRoute allow={["super_admin","admin"]}><Usuarios /></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute allow={["super_admin"]}><SuperAdmin /></ProtectedRoute>} />
+          <Route path="/gestor/empresa" element={<ProtectedRoute allow={["super_admin","admin"]}><Empresa /></ProtectedRoute>} />
+          <Route path="/gestor/relatorios-ponto" element={<ProtectedRoute allow={[...GESTOR]}><RelatoriosPonto /></ProtectedRoute>} />
+
           <Route path="/gemini" element={<GeminiTest />} />
           <Route path="/ai-test" element={<AiTest />} />
           <Route path="*" element={<NotFound />} />

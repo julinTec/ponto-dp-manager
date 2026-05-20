@@ -75,24 +75,36 @@ export type Database = {
           ativo: boolean
           cnpj: string | null
           created_at: string
+          endereco: string | null
           id: string
+          latitude: number | null
+          longitude: number | null
           nome: string
+          raio_ponto_metros: number
           updated_at: string
         }
         Insert: {
           ativo?: boolean
           cnpj?: string | null
           created_at?: string
+          endereco?: string | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           nome: string
+          raio_ponto_metros?: number
           updated_at?: string
         }
         Update: {
           ativo?: boolean
           cnpj?: string | null
           created_at?: string
+          endereco?: string | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           nome?: string
+          raio_ponto_metros?: number
           updated_at?: string
         }
         Relationships: []
@@ -233,6 +245,7 @@ export type Database = {
           status: Database["public"]["Enums"]["employee_status"]
           telefone: string | null
           updated_at: string
+          user_id: string | null
           work_schedule_type:
             | Database["public"]["Enums"]["work_schedule_type"]
             | null
@@ -255,6 +268,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["employee_status"]
           telefone?: string | null
           updated_at?: string
+          user_id?: string | null
           work_schedule_type?:
             | Database["public"]["Enums"]["work_schedule_type"]
             | null
@@ -277,6 +291,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["employee_status"]
           telefone?: string | null
           updated_at?: string
+          user_id?: string | null
           work_schedule_type?:
             | Database["public"]["Enums"]["work_schedule_type"]
             | null
@@ -424,6 +439,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      punch_records: {
+        Row: {
+          accuracy: number | null
+          company_id: string
+          created_at: string
+          dentro_do_raio: boolean
+          distancia_metros: number | null
+          employee_id: string | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          origem: string
+          registrado_em: string
+          tipo: string
+          user_id: string
+        }
+        Insert: {
+          accuracy?: number | null
+          company_id: string
+          created_at?: string
+          dentro_do_raio?: boolean
+          distancia_metros?: number | null
+          employee_id?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          origem?: string
+          registrado_em?: string
+          tipo: string
+          user_id: string
+        }
+        Update: {
+          accuracy?: number | null
+          company_id?: string
+          created_at?: string
+          dentro_do_raio?: boolean
+          distancia_metros?: number | null
+          employee_id?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          origem?: string
+          registrado_em?: string
+          tipo?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       time_entries: {
         Row: {
@@ -766,7 +829,7 @@ export type Database = {
         | "exame_admissional"
         | "outro"
       admission_status: "em_analise" | "aprovado" | "rejeitado"
-      app_role: "super_admin" | "admin" | "revisor"
+      app_role: "super_admin" | "admin" | "revisor" | "funcionario"
       batch_status:
         | "enviado"
         | "processando"
@@ -929,7 +992,7 @@ export const Constants = {
         "outro",
       ],
       admission_status: ["em_analise", "aprovado", "rejeitado"],
-      app_role: ["super_admin", "admin", "revisor"],
+      app_role: ["super_admin", "admin", "revisor", "funcionario"],
       batch_status: [
         "enviado",
         "processando",
