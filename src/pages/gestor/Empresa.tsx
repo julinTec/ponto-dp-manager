@@ -9,12 +9,18 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { getCurrentPosition } from "@/services/geolocation";
-import { Loader2, MapPin } from "lucide-react";
+import { geocodeAddress } from "@/services/geocoding";
+import { Loader2, MapPin, Search } from "lucide-react";
+
+
 
 export default function Empresa() {
   const { profile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [geocoding, setGeocoding] = useState(false);
+  const [enderecoEncontrado, setEnderecoEncontrado] = useState<string | null>(null);
+
   const [form, setForm] = useState({
     nome: "",
     cnpj: "",
@@ -56,6 +62,26 @@ export default function Empresa() {
       toast.error(e.message);
     }
   }
+
+  async function buscarCoordenadasPorEndereco() {
+    if (!form.endereco || form.endereco.trim().length < 5) {
+      toast.error("Digite um endereço completo");
+      return;
+    }
+    setGeocoding(true);
+    setEnderecoEncontrado(null);
+    try {
+      const r = await geocodeAddress(form.endereco);
+      setForm((f) => ({ ...f, latitude: r.lat.toFixed(7), longitude: r.lng.toFixed(7) }));
+      setEnderecoEncontrado(r.displayName);
+      toast.success("Coordenadas encontradas");
+    } catch (e: any) {
+      toast.error(e.message || "Endereço não encontrado");
+    } finally {
+      setGeocoding(false);
+    }
+  }
+
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
