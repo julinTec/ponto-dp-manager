@@ -9,12 +9,18 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { getCurrentPosition } from "@/services/geolocation";
-import { Loader2, MapPin } from "lucide-react";
+import { geocodeAddress } from "@/services/geocoding";
+import { Loader2, MapPin, Search } from "lucide-react";
+
+
 
 export default function Empresa() {
   const { profile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [geocoding, setGeocoding] = useState(false);
+  const [enderecoEncontrado, setEnderecoEncontrado] = useState<string | null>(null);
+
   const [form, setForm] = useState({
     nome: "",
     cnpj: "",
@@ -56,6 +62,26 @@ export default function Empresa() {
       toast.error(e.message);
     }
   }
+
+  async function buscarCoordenadasPorEndereco() {
+    if (!form.endereco || form.endereco.trim().length < 5) {
+      toast.error("Digite um endereço completo");
+      return;
+    }
+    setGeocoding(true);
+    setEnderecoEncontrado(null);
+    try {
+      const r = await geocodeAddress(form.endereco);
+      setForm((f) => ({ ...f, latitude: r.lat.toFixed(7), longitude: r.lng.toFixed(7) }));
+      setEnderecoEncontrado(r.displayName);
+      toast.success("Coordenadas encontradas");
+    } catch (e: any) {
+      toast.error(e.message || "Endereço não encontrado");
+    } finally {
+      setGeocoding(false);
+    }
+  }
+
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -108,7 +134,16 @@ export default function Empresa() {
               </div>
               <div className="space-y-1 md:col-span-2">
                 <Label htmlFor="endereco">Endereço</Label>
-                <Input id="endereco" value={form.endereco} onChange={(e) => setForm({ ...form, endereco: e.target.value })} placeholder="Rua, número, bairro, cidade" />
+                <div className="flex gap-2">
+                  <Input id="endereco" value={form.endereco} onChange={(e) => setForm({ ...form, endereco: e.target.value })} placeholder="Rua, número, bairro, cidade" />
+                  <Button type="button" variant="outline" onClick={buscarCoordenadasPorEndereco} disabled={geocoding}>
+                    {geocoding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                    <span className="ml-2 hidden sm:inline">Buscar</span>
+                  </Button>
+                </div>
+                {enderecoEncontrado && (
+                  <p className="text-xs text-muted-foreground">Encontrado: {enderecoEncontrado}</p>
+                )}
               </div>
               <div className="space-y-1">
                 <Label htmlFor="lat">Latitude</Label>
@@ -118,6 +153,7 @@ export default function Empresa() {
                 <Label htmlFor="lng">Longitude</Label>
                 <Input id="lng" type="number" step="0.0000001" value={form.longitude} onChange={(e) => setForm({ ...form, longitude: e.target.value })} />
               </div>
+
             </div>
 
             <div className="flex flex-wrap gap-2">
