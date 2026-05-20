@@ -1,136 +1,57 @@
-# Sistema de Ponto por Geolocalização
+## Geocoding automático de endereço → lat/lng
 
-Expansão do projeto atual (folha de ponto via OCR) com um novo módulo de batida de ponto em tempo real, separando claramente a área do **Gestor** e a área do **Funcionário**. Nenhuma funcionalidade existente é removida.
+Hoje, na tela **Gestor → Empresa**, o gestor precisa digitar latitude e longitude manualmente (ou clicar em "Usar minha localização atual", o que só funciona se ele estiver fisicamente na empresa). Vamos adicionar **geocodificação automática**: o gestor digita o endereço, clica em um botão (ou perde o foco do campo), e o sistema busca lat/lng automaticamente e salva.
 
-## 1. Banco de dados (Supabase)
+### Como vai funcionar
 
-### Alterações em `companies`
-Adicionar colunas:
-- `endereco text`
-- `latitude numeric(10,7)`
-- `longitude numeric(10,7)`
-- `raio_ponto_metros integer default 150`
+1. Gestor digita o endereço completo no campo "Endereço" (ex: "Av. Paulista, 1000, São Paulo, SP").
+2. Clica no botão **"Buscar coordenadas pelo endereço"** ao lado.
+3. Sistema chama um serviço de geocoding, retorna lat/lng e preenche os campos automaticamente.
+4. Mostra também o endereço normalizado encontrado (ex: "Avenida Paulista, 1000 - Bela Vista, São Paulo - SP, 01310-100") para o gestor confirmar que achou o lugar certo.
+5. Gestor revisa e clica em **Salvar** — lat/lng ficam gravados em `companies` e o funcionário usa esse ponto fixo para bater ponto.
 
-### Novo enum em `app_role`
-- adicionar valor `funcionario` ao enum existente
+### Qual serviço de geocoding usar
 
-### Nova tabela `punch_records`
-Campos:
-- `id uuid pk`
-- `company_id uuid` (FK lógico)
-- `employee_id uuid`
-- `user_id uuid` (auth.users)
-- `tipo text` — `entrada | saida_intervalo | retorno_intervalo | saida_final`
-- `registrado_em timestamptz default now()`
-- `latitude numeric(10,7)`, `longitude numeric(10,7)`
-- `distancia_metros numeric`
-- `dentro_do_raio boolean`
-- `origem text` — `web | mobile`
-- `created_at timestamptz default now()`
+Tenho duas opções, ambas viáveis. Recomendo a **opção A** para começar (zero configuração, grátis, sem cartão de crédito):
 
-RLS:
-- Funcionário lê e insere apenas seus próprios registros (`user_id = auth.uid()`)
-- Gestor/admin da empresa lê todos os registros da própria empresa
-- Super admin lê tudo
+**Opção A — Nominatim (OpenStreetMap) — recomendado**
+- 100% grátis, sem chave de API.
+- Boa cobertura para endereços brasileiros.
+- Limite: 1 requisição por segundo (mais que suficiente — só roda quando o gestor clica no botão).
+- Exige enviar um header `User-Agent` identificando o app — por isso a chamada vai por uma edge function (não dá pra chamar direto do browser por causa de CORS + boas práticas).
 
-### Vínculo funcionário ↔ usuário
-Adicionar `employees.user_id uuid` (nullable) para ligar um login ao registro de funcionário. O gestor poderá vincular ao convidar/cadastrar.
+**Opção B — Google Maps Geocoding API**
+- Mais preciso em alguns casos (especialmente endereços ambíguos).
+- Exige criar conta no Google Cloud, ativar billing e gerar uma chave de API.
+- Tem free tier generoso ($200/mês de crédito), mas requer cartão cadastrado.
+- Eu pediria a chave via secret e usaria na mesma edge function.
 
-## 2. Roles e permissões
+### Implementação técnica
 
-- Novo role `funcionario` em `user_roles`.
-- Função `has_role` já existente continua válida.
-- `ProtectedRoute` ganha prop opcional `allow={['admin','super_admin']}` ou `allow={['funcionario']}`.
-- Após login, redirecionamento por role:
-  - `super_admin | admin` → `/` (dashboard atual)
-  - `funcionario` → `/ponto`
+**1. Edge function `geocode-address`** (`supabase/functions/geocode-address/index.ts`)
+- Recebe `{ address: string }`.
+- Chama Nominatim: `https://nominatim.openstreetmap.org/search?q=<endereço>&format=json&limit=1&countrycodes=br`.
+- Envia `User-Agent: ponto-dp-manager (lovable)` conforme política do Nominatim.
+- Retorna `{ lat, lng, display_name }` ou erro `not_found`.
+- CORS habilitado, validação Zod do input.
 
-## 3. Rotas e páginas
+**2. Serviço cliente** (`src/services/geocoding.ts`)
+- `geocodeAddress(address): Promise<{lat, lng, displayName}>`.
+- Chama a edge function via `supabase.functions.invoke`.
 
-Estrutura nova (mantendo as atuais intactas):
+**3. Atualizar `src/pages/gestor/Empresa.tsx`**
+- Adicionar botão **"Buscar coordenadas pelo endereço"** ao lado do campo Endereço.
+- Ao clicar: chama `geocodeAddress(form.endereco)`, preenche `latitude` e `longitude`, mostra toast com `display_name` para confirmação.
+- Manter botão "Usar minha localização atual" como alternativa.
+- Mostrar abaixo dos campos lat/lng uma linha discreta "Endereço encontrado: …" quando o geocoding retornar.
 
-```text
-src/pages/gestor/
-  Empresa.tsx           → /gestor/empresa        (endereço, lat/lng, raio)
-  Funcionarios.tsx      → /gestor/funcionarios   (wrapper reaproveitando lógica atual + vínculo de user_id)
-  RelatoriosPonto.tsx   → /gestor/relatorios-ponto
+### O que NÃO muda
 
-src/pages/funcionario/
-  BaterPonto.tsx        → /ponto
-  MeuHistorico.tsx      → /meu-historico
-```
+- O fluxo do funcionário (`BaterPonto`) continua igual — ele lê os lat/lng já salvos em `companies` e compara com sua localização atual.
+- Schema do banco não muda — as colunas `endereco`, `latitude`, `longitude` já existem.
+- Nenhuma funcionalidade existente é removida.
 
-As rotas antigas (`/funcionarios`, `/relatorios`, `/lotes`, etc.) continuam funcionando para o gestor.
+### Confirmação antes de implementar
 
-## 4. Serviços e utilitários
-
-```text
-src/services/geolocation.ts
-  - getCurrentPosition(): Promise<{lat, lng, accuracy}>
-  - watchPosition / clearWatch (opcional)
-  - tratamento de permissão negada, timeout, baixa precisão
-
-src/utils/distance.ts
-  - haversineMeters(a, b): number
-  - isWithinRadius(userPos, companyPos, radiusM): boolean
-
-src/services/punch.ts
-  - registrarPonto({tipo}) → busca empresa do funcionário, calcula distância, grava em punch_records
-  - listarMeusPontos(periodo)
-  - listarPontosEmpresa(filtros) para gestor
-```
-
-## 5. Tela `BaterPonto.tsx`
-
-Fluxo:
-1. Ao montar, solicita geolocalização (`navigator.geolocation.getCurrentPosition` com `enableHighAccuracy: true`).
-2. Mostra status: "Obtendo localização…", erro de permissão, baixa precisão.
-3. Busca `latitude/longitude/raio_ponto_metros` da empresa do funcionário.
-4. Calcula distância via Haversine e exibe: "Você está a X m da empresa (raio permitido: Y m)".
-5. Quatro botões grandes: **Entrada**, **Saída intervalo**, **Retorno intervalo**, **Saída final**.
-6. Se `dentro_do_raio === false`: botões desabilitados + mensagem "Você está fora da área autorizada para bater ponto".
-7. Sempre grava em `punch_records` mesmo se fora do raio (com `dentro_do_raio = false`) para auditoria — botão fica desabilitado no fluxo normal, mas opcionalmente gestor pode habilitar registros remotos.
-8. Confirmação visual + último ponto do dia.
-
-UI mobile-first (cards grandes, fonte legível, tap targets ≥ 48px).
-
-## 6. Tela `MeuHistorico.tsx`
-Lista cronológica dos próprios `punch_records` com filtro por mês, mostrando tipo, horário, distância e badge "dentro/fora do raio".
-
-## 7. Tela `gestor/Empresa.tsx`
-Formulário com endereço (texto), latitude, longitude, raio (metros).
-Botão "Usar minha localização atual" para preencher lat/lng a partir do navegador.
-Opcional v2: geocoding via endereço (fora deste plano).
-
-## 8. Tela `gestor/RelatoriosPonto.tsx`
-Tabela de `punch_records` filtrada por funcionário, período e status de raio. Exporta CSV.
-
-## 9. Layout / Menu
-
-Atualizar a sidebar para mostrar itens conforme role:
-
-- **Gestor**: itens atuais + grupo "Ponto" → Empresa, Funcionários, Relatórios de Ponto.
-- **Funcionário**: somente Bater Ponto e Meu Histórico (sidebar enxuta, layout dedicado mobile-friendly).
-
-## 10. Detalhes técnicos
-
-- React Router já em uso; adicionar guarda por role com hook `useUserRole()` (lê `user_roles`).
-- Reutilizar cliente Supabase existente.
-- Toda comunicação client-side (sem edge function nesta fase) — Haversine roda no cliente; gravação por insert RLS-protegido.
-- Para impedir spoofing trivial, marcar `origem` e `dentro_do_raio` no insert; v2 pode mover validação para edge function que recebe lat/lng e valida server-side antes de gravar (recomendado mais à frente).
-
-## 11. Migração e ordem de execução
-
-1. Migration: enum `funcionario`, colunas em `companies` e `employees.user_id`, tabela `punch_records` + RLS.
-2. Utils `distance.ts` + serviço `geolocation.ts` + `punch.ts`.
-3. Páginas funcionário (`BaterPonto`, `MeuHistorico`) + rotas + layout mobile.
-4. Página gestor `Empresa.tsx` (endereço/raio) e `RelatoriosPonto.tsx`.
-5. Atualizar sidebar e redirecionamento por role no login.
-6. Vincular funcionário ↔ usuário em `gestor/Funcionarios.tsx`.
-
-## Pontos a confirmar
-
-1. **Como o funcionário entra no sistema?** Convite por e-mail enviado pelo gestor (gera usuário em `auth.users` e role `funcionario` já vinculado ao `employees.id`), ou o gestor cria login/senha manualmente?
-2. **Validação server-side da geolocalização agora ou depois?** Posso já criar a edge function `register-punch` para evitar spoofing, ou começar só no cliente?
-3. **Raio padrão**: 150 m está bom como default ou prefere outro valor?
-4. **Tipos de batida**: confirma os quatro (entrada, saída intervalo, retorno intervalo, saída final) iguais à folha OCR, ou prefere algo livre tipo "entrada/saída" alternando?
+1. **Qual serviço de geocoding?** Opção A (Nominatim, grátis, sem chave) ou Opção B (Google, mais preciso, exige conta Google Cloud)?
+2. **Quando disparar a busca?** Só ao clicar no botão (mais controlado) ou também automaticamente quando o gestor sair do campo "Endereço" (`onBlur`)?
