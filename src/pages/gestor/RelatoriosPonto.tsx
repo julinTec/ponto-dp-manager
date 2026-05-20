@@ -81,7 +81,7 @@ export default function RelatoriosPonto() {
 
   return (
     <AppLayout>
-      <PageHeader title="Relatórios de ponto" description="Registros de batida de ponto por geolocalização" />
+      <PageHeader title="Relatórios de ponto" subtitle="Registros de batida de ponto por geolocalização" />
       <div className="p-6 space-y-4">
         <Card className="p-4">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">

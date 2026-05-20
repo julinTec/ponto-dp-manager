@@ -89,7 +89,7 @@ export default function Empresa() {
 
   return (
     <AppLayout>
-      <PageHeader title="Empresa" description="Dados da empresa e área permitida para bater ponto" />
+      <PageHeader title="Empresa" subtitle="Dados da empresa e área permitida para bater ponto" />
       <div className="p-6 max-w-2xl">
         <Card className="p-6">
           <form onSubmit={handleSave} className="space-y-4">
