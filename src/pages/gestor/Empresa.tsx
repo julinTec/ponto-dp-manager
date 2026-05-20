@@ -134,7 +134,16 @@ export default function Empresa() {
               </div>
               <div className="space-y-1 md:col-span-2">
                 <Label htmlFor="endereco">Endereço</Label>
-                <Input id="endereco" value={form.endereco} onChange={(e) => setForm({ ...form, endereco: e.target.value })} placeholder="Rua, número, bairro, cidade" />
+                <div className="flex gap-2">
+                  <Input id="endereco" value={form.endereco} onChange={(e) => setForm({ ...form, endereco: e.target.value })} placeholder="Rua, número, bairro, cidade" />
+                  <Button type="button" variant="outline" onClick={buscarCoordenadasPorEndereco} disabled={geocoding}>
+                    {geocoding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                    <span className="ml-2 hidden sm:inline">Buscar</span>
+                  </Button>
+                </div>
+                {enderecoEncontrado && (
+                  <p className="text-xs text-muted-foreground">Encontrado: {enderecoEncontrado}</p>
+                )}
               </div>
               <div className="space-y-1">
                 <Label htmlFor="lat">Latitude</Label>
@@ -144,6 +153,7 @@ export default function Empresa() {
                 <Label htmlFor="lng">Longitude</Label>
                 <Input id="lng" type="number" step="0.0000001" value={form.longitude} onChange={(e) => setForm({ ...form, longitude: e.target.value })} />
               </div>
+
             </div>
 
             <div className="flex flex-wrap gap-2">
