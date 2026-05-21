@@ -1,57 +1,80 @@
-## Geocoding automático de endereço → lat/lng
 
-Hoje, na tela **Gestor → Empresa**, o gestor precisa digitar latitude e longitude manualmente (ou clicar em "Usar minha localização atual", o que só funciona se ele estiver fisicamente na empresa). Vamos adicionar **geocodificação automática**: o gestor digita o endereço, clica em um botão (ou perde o foco do campo), e o sistema busca lat/lng automaticamente e salva.
+# Plano: gestão de Funcionários na página Usuários
 
-### Como vai funcionar
+## Visão geral
 
-1. Gestor digita o endereço completo no campo "Endereço" (ex: "Av. Paulista, 1000, São Paulo, SP").
-2. Clica no botão **"Buscar coordenadas pelo endereço"** ao lado.
-3. Sistema chama um serviço de geocoding, retorna lat/lng e preenche os campos automaticamente.
-4. Mostra também o endereço normalizado encontrado (ex: "Avenida Paulista, 1000 - Bela Vista, São Paulo - SP, 01310-100") para o gestor confirmar que achou o lugar certo.
-5. Gestor revisa e clica em **Salvar** — lat/lng ficam gravados em `companies` e o funcionário usa esse ponto fixo para bater ponto.
+Hoje `/usuarios` cria apenas **Admin** e **Gerencial**. Vamos transformá-la em hub único de acessos da empresa, adicionando uma aba **Funcionários** que cria o login do colaborador (perfil `funcionario`) com senha temporária. Esse usuário, ao logar em `/auth`, já é redirecionado automaticamente para `/ponto` (rota já existente).
 
-### Qual serviço de geocoding usar
+Toda a lógica de criação continua passando pelo edge function `admin-create-user`, que será estendido para aceitar o novo perfil.
 
-Tenho duas opções, ambas viáveis. Recomendo a **opção A** para começar (zero configuração, grátis, sem cartão de crédito):
+## Estrutura final da página
 
-**Opção A — Nominatim (OpenStreetMap) — recomendado**
-- 100% grátis, sem chave de API.
-- Boa cobertura para endereços brasileiros.
-- Limite: 1 requisição por segundo (mais que suficiente — só roda quando o gestor clica no botão).
-- Exige enviar um header `User-Agent` identificando o app — por isso a chamada vai por uma edge function (não dá pra chamar direto do browser por causa de CORS + boas práticas).
+```text
+/usuarios
+ ├── Aba "Equipe interna"   → comportamento atual (Admin/Gerencial)
+ └── Aba "Funcionários"     → nova
+      ├── Tabela: Nome | Cargo | Jornada | Email | Último ponto | Ações
+      └── Botão "Adicionar funcionário" → Dialog com 2 modos:
+           ◦ Vincular funcionário existente (select dos employees sem user_id)
+           ◦ Criar funcionário novo (nome, cpf, cargo, jornada, email, senha)
+```
 
-**Opção B — Google Maps Geocoding API**
-- Mais preciso em alguns casos (especialmente endereços ambíguos).
-- Exige criar conta no Google Cloud, ativar billing e gerar uma chave de API.
-- Tem free tier generoso ($200/mês de crédito), mas requer cartão cadastrado.
-- Eu pediria a chave via secret e usaria na mesma edge function.
+## Mudanças por arquivo
 
-### Implementação técnica
+### 1. `supabase/functions/admin-create-user/index.ts`
+Aceitar novo payload:
+- `role: "admin" | "revisor" | "funcionario"`
+- Quando `role = funcionario`, campos extras:
+  - `employee_id?: string` (vincular a um employee existente) **ou**
+  - `employee_data?: { nome, cpf?, cargo?, jornada_padrao_horas? }` (criar novo)
+- Fluxo:
+  1. Valida que o caller é admin da empresa (já existe).
+  2. Cria auth user (já existe).
+  3. Reaponta profile para a empresa do caller, apaga company fantasma (já existe).
+  4. Insere `user_roles` com `role = funcionario` em vez de admin/revisor.
+  5. Se `employee_id` veio: `UPDATE employees SET user_id = newUserId, email = email WHERE id = employee_id AND company_id = caller.company`.
+  6. Se `employee_data` veio: `INSERT INTO employees (company_id, user_id, nome, cpf, cargo, jornada_padrao_horas, email)`.
+- Retorna `{ ok, user_id, employee_id }`.
 
-**1. Edge function `geocode-address`** (`supabase/functions/geocode-address/index.ts`)
-- Recebe `{ address: string }`.
-- Chama Nominatim: `https://nominatim.openstreetmap.org/search?q=<endereço>&format=json&limit=1&countrycodes=br`.
-- Envia `User-Agent: ponto-dp-manager (lovable)` conforme política do Nominatim.
-- Retorna `{ lat, lng, display_name }` ou erro `not_found`.
-- CORS habilitado, validação Zod do input.
+### 2. `src/pages/Usuarios.tsx`
+- Envolver conteúdo em `<Tabs>` com `equipe` e `funcionarios`.
+- A aba `equipe` mantém exatamente o que já existe (não quebra nada).
+- A aba `funcionarios`:
+  - Query 1: `user_roles` com `role=funcionario` da empresa.
+  - Query 2: `employees` da empresa com `user_id IS NOT NULL` (para cargo/jornada).
+  - Query 3 (opcional, mesma view): último `punch_records.registrado_em` por `user_id`.
+  - Renderiza tabela própria.
+  - Botão **Adicionar funcionário** abre um Dialog separado (`AddFuncionarioDialog`).
 
-**2. Serviço cliente** (`src/services/geocoding.ts`)
-- `geocodeAddress(address): Promise<{lat, lng, displayName}>`.
-- Chama a edge function via `supabase.functions.invoke`.
+### 3. Novo: `src/components/AddFuncionarioDialog.tsx`
+- Tabs internas **"Vincular existente"** | **"Criar novo"**.
+- **Vincular existente**: select com employees da empresa onde `user_id IS NULL`; campos email + senha temporária; ao salvar chama `admin-create-user` com `employee_id`.
+- **Criar novo**: campos nome, cpf (opcional), cargo, jornada (default 8), email, senha; chama `admin-create-user` com `employee_data`.
+- Ao sucesso: mostra modal de confirmação com **email + senha + link** (`window.location.origin/auth`) e botão "Copiar instruções" — gestor envia manualmente ao funcionário (WhatsApp, etc.).
 
-**3. Atualizar `src/pages/gestor/Empresa.tsx`**
-- Adicionar botão **"Buscar coordenadas pelo endereço"** ao lado do campo Endereço.
-- Ao clicar: chama `geocodeAddress(form.endereco)`, preenche `latitude` e `longitude`, mostra toast com `display_name` para confirmação.
-- Manter botão "Usar minha localização atual" como alternativa.
-- Mostrar abaixo dos campos lat/lng uma linha discreta "Endereço encontrado: …" quando o geocoding retornar.
+### 4. `src/pages/Auth.tsx` (verificar — possivelmente já feito)
+- Após login, se único papel for `funcionario`, redirecionar para `/ponto`. Se a lógica ainda não existir nesse arquivo, ajustar.
 
-### O que NÃO muda
+### 5. `src/App.tsx`
+- Sem mudanças. Rotas `/ponto` e `/meu-historico` já existem com guard `funcionario`.
 
-- O fluxo do funcionário (`BaterPonto`) continua igual — ele lê os lat/lng já salvos em `companies` e compara com sua localização atual.
-- Schema do banco não muda — as colunas `endereco`, `latitude`, `longitude` já existem.
-- Nenhuma funcionalidade existente é removida.
+## Banco de dados
 
-### Confirmação antes de implementar
+Nenhuma migração nova é necessária:
+- `employees.user_id` já existe.
+- `user_roles` já suporta `role = 'funcionario'`.
+- `punch_records` já está pronto.
 
-1. **Qual serviço de geocoding?** Opção A (Nominatim, grátis, sem chave) ou Opção B (Google, mais preciso, exige conta Google Cloud)?
-2. **Quando disparar a busca?** Só ao clicar no botão (mais controlado) ou também automaticamente quando o gestor sair do campo "Endereço" (`onBlur`)?
+## Pontos de atenção
+
+- O trigger `handle_new_user` cria automaticamente uma empresa-fantasma + role `admin` para todo novo signup. O edge function já lida com isso (apaga fantasma, reatribui company). Apenas garantir que a parte de "apagar role auto-criado e inserir o role escolhido" trate o caso `funcionario`.
+- Validar no edge function que `employee_id` informado pertence à empresa do caller (anti-IDOR).
+- Validar que o employee escolhido ainda não tem `user_id` (evita sobrescrever vínculo).
+- Email do funcionário precisa ser único no auth — se já existir, retornar erro amigável.
+
+## O que NÃO está no escopo
+
+- Envio automático de email com credenciais (você optou por senha temporária manual).
+- Magic link / link compartilhável.
+- Edição de cargo/jornada pela própria página Usuários (continua sendo feito em `/funcionarios`).
+- Alteração visual da área do funcionário (`/ponto`, `/meu-historico`).
