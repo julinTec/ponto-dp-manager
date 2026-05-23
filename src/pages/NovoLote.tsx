@@ -169,9 +169,9 @@ export default function NovoLote() {
         )}
 
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="grid grid-cols-2 w-full max-w-md">
-            <TabsTrigger value="single"><FileUp className="h-4 w-4 mr-2" />Folha única</TabsTrigger>
-            <TabsTrigger value="lote"><FileStack className="h-4 w-4 mr-2" />Lote</TabsTrigger>
+          <TabsList className="grid grid-cols-2 w-full max-w-md bg-card border border-border/60 rounded-xl p-1">
+            <TabsTrigger value="single" className="rounded-lg data-[state=active]:bg-gradient-primary data-[state=active]:text-white"><FileUp className="h-4 w-4 mr-2" />Folha única</TabsTrigger>
+            <TabsTrigger value="lote" className="rounded-lg data-[state=active]:bg-gradient-primary data-[state=active]:text-white"><FileStack className="h-4 w-4 mr-2" />Lote</TabsTrigger>
           </TabsList>
 
           {/* ---------------- Folha única ---------------- */}
