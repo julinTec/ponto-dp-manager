@@ -143,8 +143,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const Brand = (
     <div className="px-5 pt-5 pb-4 border-b border-sidebar-border/60">
       <div className="flex items-center gap-3">
-        <div className="h-12 px-3 rounded-xl bg-white flex items-center justify-center shadow-premium">
-          <img src={fluxorLogo} alt="Fluxor" className="h-7 w-auto" />
+        <div className="h-12 flex items-center justify-center">
+          <img src={fluxorLogo} alt="Fluxor" className="h-9 w-auto brightness-0 invert" />
         </div>
         <div>
           <p className="text-[11px] text-sidebar-foreground/50 leading-tight">Departamento Pessoal</p>

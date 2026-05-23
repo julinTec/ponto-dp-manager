@@ -58,8 +58,8 @@ export default function Auth() {
         <div className="absolute -left-16 -bottom-20 h-72 w-72 rounded-full bg-premium/20 blur-3xl" />
 
         <div className="relative flex items-center gap-3">
-          <div className="h-12 px-4 rounded-xl bg-white/95 flex items-center justify-center shadow-premium">
-            <img src={fluxorLogo} alt="Fluxor" className="h-7 w-auto" />
+          <div className="h-12 flex items-center justify-center">
+            <img src={fluxorLogo} alt="Fluxor" className="h-10 w-auto brightness-0 invert" />
           </div>
           <div>
             <p className="text-xs text-white/70 leading-tight">Departamento Pessoal</p>
