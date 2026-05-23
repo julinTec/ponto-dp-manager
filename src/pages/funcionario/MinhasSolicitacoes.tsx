@@ -86,10 +86,10 @@ export default function MinhasSolicitacoes() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold">Solicitações</h1>
+            <h1 className="text-xl font-semibold tracking-tight">Solicitações</h1>
             <p className="text-sm text-muted-foreground">Férias, folgas, trocas e abonos</p>
           </div>
-          <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" />Nova</Button>
+          <Button onClick={() => setOpen(true)} size="sm" className="bg-gradient-primary shadow-sm rounded-full"><Plus className="h-4 w-4 mr-1" />Nova</Button>
         </div>
 
         <Card className="overflow-hidden">
