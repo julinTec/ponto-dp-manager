@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, FileBarChart2, Shield, LogOut, Clock,
-  UserCog, UserPlus, FileText, Building2, MapPin, CalendarCheck2,
+  UserCog, UserPlus, FileText, Building2, MapPin, CalendarCheck2, Inbox,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
       { to: "/funcionarios", label: "Funcionários", icon: Users },
       { to: "/admissoes", label: "Admissões", icon: UserPlus },
       { to: "/documentos", label: "Documentos", icon: FileText },
+      { to: "/aprovacoes", label: "Aprovações", icon: Inbox },
     ],
   },
   {

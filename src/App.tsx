@@ -60,6 +60,7 @@ const App = () => (
           <Route path="/funcionarios" element={<ProtectedRoute allow={[...GESTOR]}><Funcionarios /></ProtectedRoute>} />
           <Route path="/funcionarios/:id" element={<ProtectedRoute allow={[...GESTOR]}><FichaFuncionario /></ProtectedRoute>} />
           <Route path="/fechamento" element={<ProtectedRoute allow={[...DP]}><FechamentoMensal /></ProtectedRoute>} />
+          <Route path="/aprovacoes" element={<ProtectedRoute allow={[...GESTOR]}><Aprovacoes /></ProtectedRoute>} />
           <Route path="/relatorios" element={<ProtectedRoute allow={[...GESTOR]}><Relatorios /></ProtectedRoute>} />
           <Route path="/admissoes" element={<ProtectedRoute allow={[...GESTOR]}><Admissoes /></ProtectedRoute>} />
           <Route path="/admissoes/:id" element={<ProtectedRoute allow={[...GESTOR]}><AdmissaoDetalhe /></ProtectedRoute>} />
