@@ -325,7 +325,7 @@ export default function Usuarios() {
           {/* ====== FUNCIONÁRIOS ====== */}
           <TabsContent value="funcionarios" className="space-y-4">
             <div className="flex justify-end">
-              <Button onClick={() => setOpenFunc(true)}>
+              <Button onClick={() => setOpenFunc(true)} className="bg-gradient-primary">
                 <UserPlus className="h-4 w-4 mr-2" /> Adicionar funcionário
               </Button>
             </div>
