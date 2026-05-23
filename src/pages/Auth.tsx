@@ -57,12 +57,12 @@ export default function Auth() {
         <div className="absolute -left-16 -bottom-20 h-72 w-72 rounded-full bg-premium/20 blur-3xl" />
 
         <div className="relative flex items-center gap-3">
-          <div className="h-11 w-11 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center">
-            <Clock className="h-5 w-5" />
+          <div className="h-12 px-4 rounded-xl bg-white/95 flex items-center justify-center shadow-premium">
+            <img src={fluxorLogo} alt="Fluxor" className="h-7 w-auto" />
           </div>
           <div>
-            <h1 className="text-lg font-bold leading-tight tracking-tight">Fluxor DP</h1>
-            <p className="text-xs text-white/60">Gestão de pessoas e ponto</p>
+            <p className="text-xs text-white/70 leading-tight">Departamento Pessoal</p>
+            <p className="text-[11px] text-white/50 leading-tight">Inteligência · Gestão · Crescimento</p>
           </div>
         </div>
 
