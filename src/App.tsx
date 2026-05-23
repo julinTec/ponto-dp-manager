@@ -23,8 +23,12 @@ import Empresa from "./pages/gestor/Empresa";
 import RelatoriosPonto from "./pages/gestor/RelatoriosPonto";
 import BaterPonto from "./pages/funcionario/BaterPonto";
 import MeuHistorico from "./pages/funcionario/MeuHistorico";
+import MinhasJustificativas from "./pages/funcionario/MinhasJustificativas";
+import MinhasSolicitacoes from "./pages/funcionario/MinhasSolicitacoes";
+import MeusDocumentos from "./pages/funcionario/MeusDocumentos";
 import FichaFuncionario from "./pages/FichaFuncionario";
 import FechamentoMensal from "./pages/FechamentoMensal";
+import Aprovacoes from "./pages/Aprovacoes";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +48,9 @@ const App = () => (
           {/* Funcionário */}
           <Route path="/ponto" element={<ProtectedRoute allow={[...FUNC]}><BaterPonto /></ProtectedRoute>} />
           <Route path="/meu-historico" element={<ProtectedRoute allow={[...FUNC]}><MeuHistorico /></ProtectedRoute>} />
+          <Route path="/minhas-justificativas" element={<ProtectedRoute allow={[...FUNC]}><MinhasJustificativas /></ProtectedRoute>} />
+          <Route path="/minhas-solicitacoes" element={<ProtectedRoute allow={[...FUNC]}><MinhasSolicitacoes /></ProtectedRoute>} />
+          <Route path="/meus-documentos" element={<ProtectedRoute allow={[...FUNC]}><MeusDocumentos /></ProtectedRoute>} />
 
           {/* Gestor */}
           <Route path="/" element={<ProtectedRoute allow={[...GESTOR]}><Dashboard /></ProtectedRoute>} />
