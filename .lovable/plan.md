@@ -1,136 +1,66 @@
+## Repaginação Visual Premium — Sistema DP
 
-# Reestruturação Fluxor DP — Plano em 4 fases
+Vou refazer toda a camada visual mantendo 100% das rotas, fluxos e regras de negócio intocadas. Trabalho apenas em CSS, layout, componentes de apresentação e ajustes de classes nas páginas.
 
-Cada fase é entregue separadamente e fica testável antes da próxima. Nada do que já funciona é removido — apenas reorganizado, escondido do menu quando obsoleto, ou substituído por uma versão melhor.
+### 1. Design system (base de tudo)
 
----
+Reescrever `src/index.css` e `tailwind.config.ts` com a paleta solicitada (em HSL):
 
-## Fase 1 — Fundação: roles, navegação, limpeza visual
+- `--background` #F6F7FB · `--card` #FFFFFF · `--foreground` #0F172A · `--muted-foreground` #64748B
+- `--primary` #2563EB · `--accent` (premium) #10B981 · `--destructive` #EF4444 · `--warning` #F59E0B · `--border` #E2E8F0
+- `--sidebar-background` #0F172A com foreground claro, accent #1E293B, ring primary
+- Sombras suaves novas: `--shadow-card`, `--shadow-elevated`, `--shadow-premium`
+- Gradientes sutis: `--gradient-surface`, `--gradient-primary`, `--gradient-premium`
+- Radius padrão `1rem` (cards em `rounded-2xl`)
+- Tipografia: importar Inter (variável) via `index.html`, tracking apertado em headings, hierarquia clara (display/h1/h2/body/caption)
+- Transições globais (`transition-colors`, `transition-shadow`) e hover states reutilizáveis
 
-**Banco**
-- Adicionar valores ao enum `app_role`: `dp`, `gestor`.
-- Atualizar políticas RLS sensíveis para que `dp` tenha permissão equivalente a `admin` em admissões/documentos/fechamento, e `gestor` tenha leitura ampliada + aprovação de justificativas/solicitações (criadas na Fase 4).
-- Função helper `is_dp_or_admin(uid)` para reuso nas policies.
+### 2. Componentes reutilizáveis (novos / repaginados)
 
-**Frontend — rotas e menu**
-- Reorganizar `src/pages/` em subpastas:
-  - `dashboard/`, `empresas/`, `funcionarios/`, `admissoes/`, `documentos/`, `ponto/`, `fechamento/`, `funcionario/`
-- Mover arquivos existentes para os novos caminhos (mantendo o conteúdo; só ajustar imports).
-- `App.tsx`: agrupar rotas por módulo, aplicar guards por role.
-- Esconder do sidebar (mas manter as rotas funcionando para não quebrar links):
-  - `/lotes`, `/lotes/novo`, `/lotes/:id/revisao`
-  - `/gemini`, `/ai-test`
-- Novo sidebar com seções: **Visão geral**, **Pessoas** (Funcionários, Admissões, Documentos), **Ponto** (Gestão, Fechamento, Relatórios), **Empresa**, **Administração**.
+Pasta `src/components/shell/` e `src/components/ui-kit/`:
 
-**Design system premium**
-- Atualizar `index.css` e `tailwind.config.ts`:
-  - Paleta: azul petróleo (primary), grafite (sidebar), branco gelo (background), esmeralda (success), âmbar (warning), coral suave (destructive).
-  - Tokens novos: `--surface`, `--surface-elevated`, `--gradient-hero`, `--shadow-premium`.
-- Refatorar `AppLayout` e `FuncionarioLayout` com sidebar moderna (collapsible icon), header com busca/avatar, cards com sombra sutil + bordas finas.
-- Novo `Dashboard` executivo: KPIs (admissões do mês, ponto em aberto, atestados ativos, horas extras consolidadas), gráfico de presença semanal, tabela de últimas ocorrências.
+- `AppShell` — wrapper com sidebar + topbar + área de conteúdo com max-width e padding consistentes
+- `Sidebar` — refazer dentro do `AppLayout.tsx` atual: fundo escuro premium, logo no topo, grupos com labels em uppercase suave, item ativo com pílula primária + barra lateral, ícones lucide consistentes, footer com usuário e logout, colapsável para ícones
+- `Topbar` — busca global (placeholder por enquanto), seletor de empresa, sininho, avatar com menu
+- `PageHeader` (já existe — repaginar): título grande, descrição cinza, breadcrumbs opcional, slot de ações à direita
+- `MetricCard` — número grande, label, ícone em chip colorido suave, delta com seta, sparkline opcional (Recharts mini)
+- `StatusBadge` (já existe — repaginar): variantes neutro/info/sucesso/aviso/erro/premium com cores suaves de fundo + texto saturado
+- `DataTable` — wrapper sobre tabela atual: header sticky, zebra suave, hover, ações em final de linha, paginação, busca e filtros no topo, empty state integrado
+- `EmptyState` — ilustração mínima + título + descrição + CTA
+- `SectionCard` — card com header (título/descrição) e slot de conteúdo, usado em formulários agrupados
+- `ActionButton` — variantes primary/secondary/ghost/danger/premium com loading e ícone
+- `EmployeeCard` — avatar com iniciais, nome, cargo, empresa, badges de status, ações rápidas
+- `Timeline` — lista vertical de eventos com ponto colorido por tipo, hora relativa, descrição
 
-**Entregáveis Fase 1**
-- Roles `dp` e `gestor` no banco com RLS ajustada.
-- Estrutura de pastas nova + sidebar/visual repaginados.
-- Dashboard executivo redesenhado.
-- Telas antigas continuam funcionando, só saem do menu.
+### 3. Páginas — aplicar o novo padrão
 
----
+Sem mexer em lógica, apenas em JSX/classes:
 
-## Fase 2 — Admissão inteligente com OpenAI (PDF)
+- **Dashboard** (`Dashboard.tsx`): grid de `MetricCard` (Funcionários ativos, Admissões em andamento, Pontos pendentes, Atestados do mês, Horas extras, Alertas de fechamento), gráfico simples (Recharts area/bar) de horas no mês, painel "Atividades recentes" usando `Timeline`
+- **Funcionários** (`Funcionarios.tsx`): toolbar de filtros + `DataTable` modernizada + opção de alternar para grid de `EmployeeCard`
+- **Ficha do Funcionário** (`FichaFuncionario.tsx`): header CRM com avatar, nome, cargo, empresa, status e ações; faixa de cards com dados-chave; abas (Cadastrais, Contrato, Documentos, Ponto, Ocorrências, Histórico); coluna direita com `Timeline` de eventos; badges para atestado/advertência/suspensão/pendências
+- **Admissões** (`Admissoes.tsx`, `AdmissaoDetalhe.tsx`): área drag-and-drop estilizada, status da IA em chip animado, checklist de documentos, dados extraídos em `SectionCard`s, botão "Aprovar admissão" em destaque premium
+- **Ponto do funcionário** (`src/pages/funcionario/*`): mobile-first, botão circular grande centralizado, card de localização com estado "Dentro da área" (verde) / "Fora da área" (vermelho), histórico do dia logo abaixo, visual confiável
+- **Aprovações, Fechamento Mensal, Documentos, Relatórios, Usuários, Lotes, Revisão, SuperAdmin, Auth**: aplicar `PageHeader`, `SectionCard`, `DataTable`, `StatusBadge` e novos espaçamentos. Tela de Auth com split-screen premium (gradiente sutil à esquerda + form à direita)
+- **FuncionarioLayout** (bottom nav mobile): repaginar com ícones maiores, item ativo destacado em pílula primária, safe-area
 
-**Pré-requisito**
-- Solicitar via `add_secret`: `OPENAI_API_KEY`.
+### 4. Responsividade
 
-**Edge function nova: `admission-pdf-extract`**
-- Recebe `admission_id` + lista de `storage_path` (PDFs já no bucket `employee-docs`).
-- Para cada PDF:
-  - Baixa do storage, envia ao endpoint **OpenAI Files + Responses API** com modelo barato (`gpt-4o-mini` ou `gpt-5-nano`) e *structured output* (JSON schema).
-  - Schema cobre: nome, cpf, rg, data_nascimento, endereco, telefone, email, nome_mae, ctps, pis_pasep, dados_admissionais (data, cargo sugerido).
-- Faz merge dos resultados (campos com maior confiança vencem) e grava em `employee_admissions.dados_extraidos`.
-- Atualiza `admission_documents.ocr_status='processado'` + `confianca`.
-- **Não usa imagem**. Estrutura preparada para Fase futura adicionar OCR.
+- Breakpoints revisados em sidebar (off-canvas < lg), topbar (busca colapsa em ícone < md), grids de métricas (`grid-cols-1 sm:grid-cols-2 xl:grid-cols-4`), tabelas com scroll horizontal + cards alternativos em mobile
 
-**Frontend**
-- Refazer `pages/admissoes/NovaAdmissao.tsx`:
-  - Wizard 3 passos: upload PDFs → revisão dos campos extraídos (editáveis, com badge de confiança) → complemento DP (salário, função, jornada, cargo, tipo de contrato) → criar/atualizar `employees`.
-- `DetalheAdmissao` ganha visualizador de PDF lateral + diff entre extraído e editado.
-- `ListaAdmissoes` com filtros por status e contagem de pendências.
+### 5. Efeitos e microinterações
 
-**Manter funcional**
-- `ocr-admission-doc` (Gemini) continua existindo como fallback opcional, mas o fluxo padrão passa a ser `admission-pdf-extract`.
+- Hover lift suave em cards (`hover:shadow-elevated transition-shadow`), botões com `active:scale-[0.98]`, fade-in nas páginas, skeletons modernos em loading
 
----
+### Detalhes técnicos
 
-## Fase 3 — Pasta digital + Fechamento mensal
+- Apenas `index.css`, `tailwind.config.ts`, componentes em `src/components/**` e JSX das páginas em `src/pages/**` são tocados
+- Nenhuma rota, hook, serviço, edge function, migração ou chamada Supabase é alterada
+- Recharts já está no projeto (usado para o gráfico do Dashboard); lucide-react para todos os ícones
+- Trabalho entregue em ondas para manter qualidade: (1) design tokens + Sidebar/Topbar/PageHeader/MetricCard/StatusBadge, (2) Dashboard + Funcionários + Ficha, (3) Admissões + Ponto + Aprovações + Fechamento, (4) demais páginas + polimento mobile
 
-**Pasta digital do funcionário**
-- Nova página `funcionarios/FichaFuncionario.tsx` com abas:
-  - **Cadastro** (dados + contrato), **Documentos** (pasta digital agrupada por tipo: admissionais, atestados, advertências, suspensões, justificativas, férias, rescisão, outros), **Ponto** (histórico + consolidado), **Ocorrências** (timeline).
-- Reusa `employee_documents`; adiciona enum/values faltantes em `document_type` se necessário (`advertencia`, `suspensao`, `justificativa`).
-- Upload organizado em storage: `employee-docs/{company_id}/{employee_id}/{tipo}/{uuid}.pdf`.
+### Fora do escopo
 
-**Fechamento mensal — `pages/fechamento/FechamentoMensal.tsx`**
-- Seleção mês/ano → lista de funcionários da empresa com:
-  - horas trabalhadas, extras, noturnas, faltantes, DSR, atestados, advertências, suspensões (badges).
-- Botão **Consolidar mês**: chama edge function `monthly-closure` que:
-  - roda `recompute_dsr_for_employee_month` para cada funcionário,
-  - gera linha em nova tabela `monthly_closures` (status `aberto|fechado`, totais),
-  - permite reabrir enquanto não exportado.
-- Botão **Exportar folha** reusa `export-batch-xlsx`/`monthly-report` adaptados.
-
-**Banco — tabela nova**
-- `monthly_closures` (company_id, employee_id, ano, mes, totais jsonb, status, fechado_em, fechado_por) com RLS por empresa e índice único (employee_id, ano, mes).
-
----
-
-## Fase 4 — Módulo funcionário ampliado + ocorrências
-
-**Banco — tabelas novas (com RLS)**
-- `employee_justifications`: employee_id, user_id, data, tipo (`atestado|falta|atraso`), descricao, documento_id (FK lógico p/ employee_documents), status (`pendente|aprovada|rejeitada`), revisado_por, revisado_em.
-- `employee_requests`: tipo (`ferias|folga|troca_turno|outro`), periodo_inicio, periodo_fim, descricao, status, revisado_por, revisado_em.
-- `employee_occurrences`: tipo (`advertencia|suspensao|elogio`), data, descricao, documento_id, criado_por. Alimenta a aba Ocorrências da ficha.
-
-**Frontend funcionário (`pages/funcionario/`)**
-- `BaterPonto.tsx` (existente, só re-skin premium).
-- `MeuHistorico.tsx` (existente).
-- `MeusDocumentos.tsx` — read-only da pasta digital do próprio funcionário.
-- `MinhasJustificativas.tsx` — formulário (data, tipo, descrição, upload de atestado em PDF) + lista com status.
-- `MinhasSolicitacoes.tsx` — formulário (tipo, período, motivo) + lista com status.
-- Nav inferior atualizado: Ponto · Histórico · Documentos · Justificativas · Solicitações.
-
-**Frontend gestor**
-- Nova caixa **Aprovações** no dashboard: justificativas e solicitações pendentes.
-- Aprovar justificativa com atestado → chama `apply_medical_certificate` automaticamente.
-
----
-
-## Detalhes técnicos consolidados
-
-```text
-DB migrations (por fase)
-  F1: ALTER TYPE app_role ADD VALUE 'dp','gestor'; função is_dp_or_admin; políticas
-  F3: CREATE TABLE monthly_closures + RLS; ALTER TYPE document_type
-  F4: CREATE TABLE employee_justifications, employee_requests, employee_occurrences + RLS
-
-Edge functions
-  F2: admission-pdf-extract (OpenAI Responses API, JSON schema, baixa do storage)
-  F3: monthly-closure (consolida e grava em monthly_closures)
-  F4: nenhuma nova (uso direto via supabase-js + RLS)
-
-Secrets
-  F2: OPENAI_API_KEY (solicitar)
-
-Rotas removidas do menu (não deletadas)
-  /lotes, /lotes/novo, /lotes/:id/revisao, /gemini, /ai-test
-```
-
-**O que NÃO está no plano**
-- Migração de dados antigos: nada é apagado, tudo continua acessível por URL direta.
-- App nativo mobile: o módulo funcionário continua web mobile-first (PWA-ready, mas sem manifesto novo agora).
-- Integração com folha externa (eSocial, RH): fora do escopo.
-- OCR de imagens na admissão: arquitetura preparada, implementação fica para fase futura.
-
----
-
-Confirme se posso começar pela **Fase 1** (fundação, sem mexer em IA ainda) ou se prefere ajustar algo antes.
+- Não altero schema, RLS, funções, lógica de negócio, validações, OCR ou cálculos
+- Não removo nem renomeio rotas/menus existentes (Lotes continua oculto como já está)
+- Não adiciono novas features funcionais
