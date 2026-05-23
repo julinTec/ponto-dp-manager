@@ -278,7 +278,7 @@ export default function NovoLote() {
                   </div>
                 )}
 
-                <Button type="submit" disabled={submitting} className="w-full">
+                <Button type="submit" disabled={submitting} className="w-full bg-gradient-primary shadow-sm">
                   {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   Criar lote e processar
                 </Button>
