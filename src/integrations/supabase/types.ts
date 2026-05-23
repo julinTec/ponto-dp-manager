@@ -306,6 +306,51 @@ export type Database = {
           },
         ]
       }
+      monthly_closures: {
+        Row: {
+          ano: number
+          company_id: string
+          created_at: string
+          employee_id: string
+          fechado_em: string | null
+          fechado_por: string | null
+          id: string
+          mes: number
+          observacoes: string | null
+          status: string
+          totais: Json
+          updated_at: string
+        }
+        Insert: {
+          ano: number
+          company_id: string
+          created_at?: string
+          employee_id: string
+          fechado_em?: string | null
+          fechado_por?: string | null
+          id?: string
+          mes: number
+          observacoes?: string | null
+          status?: string
+          totais?: Json
+          updated_at?: string
+        }
+        Update: {
+          ano?: number
+          company_id?: string
+          created_at?: string
+          employee_id?: string
+          fechado_em?: string | null
+          fechado_por?: string | null
+          id?: string
+          mes?: number
+          observacoes?: string | null
+          status?: string
+          totais?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       payroll_adjustments: {
         Row: {
           batch_id: string | null
