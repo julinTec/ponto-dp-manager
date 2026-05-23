@@ -101,12 +101,12 @@ export default function Auth() {
       {/* Right: form */}
       <main className="flex flex-col items-center justify-center p-6 sm:p-12">
         <div className="lg:hidden flex items-center gap-3 mb-8">
-          <div className="h-11 w-11 rounded-xl bg-gradient-primary flex items-center justify-center shadow-premium">
-            <Clock className="h-5 w-5 text-primary-foreground" />
+          <div className="h-12 px-4 rounded-xl bg-white border border-border flex items-center justify-center shadow-premium">
+            <img src={fluxorLogo} alt="Fluxor" className="h-7 w-auto" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-foreground leading-tight">Fluxor DP</h1>
-            <p className="text-xs text-muted-foreground">Gestão de pessoas e ponto</p>
+            <p className="text-xs text-muted-foreground leading-tight">Departamento Pessoal</p>
+            <p className="text-[11px] text-muted-foreground/70 leading-tight">Inteligência · Gestão · Crescimento</p>
           </div>
         </div>
 
