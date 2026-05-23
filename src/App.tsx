@@ -23,8 +23,12 @@ import Empresa from "./pages/gestor/Empresa";
 import RelatoriosPonto from "./pages/gestor/RelatoriosPonto";
 import BaterPonto from "./pages/funcionario/BaterPonto";
 import MeuHistorico from "./pages/funcionario/MeuHistorico";
+import MinhasJustificativas from "./pages/funcionario/MinhasJustificativas";
+import MinhasSolicitacoes from "./pages/funcionario/MinhasSolicitacoes";
+import MeusDocumentos from "./pages/funcionario/MeusDocumentos";
 import FichaFuncionario from "./pages/FichaFuncionario";
 import FechamentoMensal from "./pages/FechamentoMensal";
+import Aprovacoes from "./pages/Aprovacoes";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +48,9 @@ const App = () => (
           {/* Funcionário */}
           <Route path="/ponto" element={<ProtectedRoute allow={[...FUNC]}><BaterPonto /></ProtectedRoute>} />
           <Route path="/meu-historico" element={<ProtectedRoute allow={[...FUNC]}><MeuHistorico /></ProtectedRoute>} />
+          <Route path="/minhas-justificativas" element={<ProtectedRoute allow={[...FUNC]}><MinhasJustificativas /></ProtectedRoute>} />
+          <Route path="/minhas-solicitacoes" element={<ProtectedRoute allow={[...FUNC]}><MinhasSolicitacoes /></ProtectedRoute>} />
+          <Route path="/meus-documentos" element={<ProtectedRoute allow={[...FUNC]}><MeusDocumentos /></ProtectedRoute>} />
 
           {/* Gestor */}
           <Route path="/" element={<ProtectedRoute allow={[...GESTOR]}><Dashboard /></ProtectedRoute>} />
@@ -53,6 +60,7 @@ const App = () => (
           <Route path="/funcionarios" element={<ProtectedRoute allow={[...GESTOR]}><Funcionarios /></ProtectedRoute>} />
           <Route path="/funcionarios/:id" element={<ProtectedRoute allow={[...GESTOR]}><FichaFuncionario /></ProtectedRoute>} />
           <Route path="/fechamento" element={<ProtectedRoute allow={[...DP]}><FechamentoMensal /></ProtectedRoute>} />
+          <Route path="/aprovacoes" element={<ProtectedRoute allow={[...GESTOR]}><Aprovacoes /></ProtectedRoute>} />
           <Route path="/relatorios" element={<ProtectedRoute allow={[...GESTOR]}><Relatorios /></ProtectedRoute>} />
           <Route path="/admissoes" element={<ProtectedRoute allow={[...GESTOR]}><Admissoes /></ProtectedRoute>} />
           <Route path="/admissoes/:id" element={<ProtectedRoute allow={[...GESTOR]}><AdmissaoDetalhe /></ProtectedRoute>} />

@@ -226,6 +226,156 @@ export type Database = {
           },
         ]
       }
+      employee_justifications: {
+        Row: {
+          attachment_path: string | null
+          company_id: string
+          created_at: string
+          data_fim: string
+          data_inicio: string
+          employee_id: string
+          id: string
+          motivo: string | null
+          reviewed_at: string | null
+          reviewer_comment: string | null
+          reviewer_id: string | null
+          status: Database["public"]["Enums"]["review_status"]
+          tipo: Database["public"]["Enums"]["justification_type"]
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          attachment_path?: string | null
+          company_id: string
+          created_at?: string
+          data_fim: string
+          data_inicio: string
+          employee_id: string
+          id?: string
+          motivo?: string | null
+          reviewed_at?: string | null
+          reviewer_comment?: string | null
+          reviewer_id?: string | null
+          status?: Database["public"]["Enums"]["review_status"]
+          tipo: Database["public"]["Enums"]["justification_type"]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          attachment_path?: string | null
+          company_id?: string
+          created_at?: string
+          data_fim?: string
+          data_inicio?: string
+          employee_id?: string
+          id?: string
+          motivo?: string | null
+          reviewed_at?: string | null
+          reviewer_comment?: string | null
+          reviewer_id?: string | null
+          status?: Database["public"]["Enums"]["review_status"]
+          tipo?: Database["public"]["Enums"]["justification_type"]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      employee_occurrences: {
+        Row: {
+          attachment_path: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          data: string
+          descricao: string | null
+          employee_id: string
+          id: string
+          tipo: Database["public"]["Enums"]["occurrence_type"]
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          attachment_path?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          data?: string
+          descricao?: string | null
+          employee_id: string
+          id?: string
+          tipo: Database["public"]["Enums"]["occurrence_type"]
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          attachment_path?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          data?: string
+          descricao?: string | null
+          employee_id?: string
+          id?: string
+          tipo?: Database["public"]["Enums"]["occurrence_type"]
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      employee_requests: {
+        Row: {
+          company_id: string
+          created_at: string
+          data_fim: string | null
+          data_inicio: string
+          detalhes: Json
+          employee_id: string
+          id: string
+          motivo: string | null
+          reviewed_at: string | null
+          reviewer_comment: string | null
+          reviewer_id: string | null
+          status: Database["public"]["Enums"]["review_status"]
+          tipo: Database["public"]["Enums"]["request_type"]
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          data_fim?: string | null
+          data_inicio: string
+          detalhes?: Json
+          employee_id: string
+          id?: string
+          motivo?: string | null
+          reviewed_at?: string | null
+          reviewer_comment?: string | null
+          reviewer_id?: string | null
+          status?: Database["public"]["Enums"]["review_status"]
+          tipo: Database["public"]["Enums"]["request_type"]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string
+          detalhes?: Json
+          employee_id?: string
+          id?: string
+          motivo?: string | null
+          reviewed_at?: string | null
+          reviewer_comment?: string | null
+          reviewer_id?: string | null
+          status?: Database["public"]["Enums"]["review_status"]
+          tipo?: Database["public"]["Enums"]["request_type"]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       employees: {
         Row: {
           admission_date: string | null
@@ -845,6 +995,7 @@ export type Database = {
         }
         Returns: number
       }
+      get_employee_id: { Args: { _user_id: string }; Returns: string }
       get_user_company: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
@@ -903,8 +1054,23 @@ export type Database = {
         | "comprovante_pagamento"
       employee_status: "ativo" | "pendente_validacao" | "inativo"
       entry_status: "ok" | "inconsistente" | "falta" | "folga" | "feriado"
+      justification_type:
+        | "atestado"
+        | "falta_justificada"
+        | "atraso"
+        | "saida_antecipada"
+        | "outro"
+      occurrence_type: "advertencia" | "suspensao" | "elogio" | "observacao"
       ocr_status: "pendente" | "processando" | "concluido" | "falhou"
       payroll_adj_type: "dsr_desconto" | "he_extra" | "outro"
+      request_type:
+        | "ferias"
+        | "folga"
+        | "troca_turno"
+        | "hora_extra"
+        | "abono"
+        | "outro"
+      review_status: "pendente" | "aprovada" | "recusada" | "cancelada"
       work_schedule_type: "5x2" | "6x1" | "12x36" | "escala" | "outro"
     }
     CompositeTypes: {
@@ -1075,8 +1241,25 @@ export const Constants = {
       ],
       employee_status: ["ativo", "pendente_validacao", "inativo"],
       entry_status: ["ok", "inconsistente", "falta", "folga", "feriado"],
+      justification_type: [
+        "atestado",
+        "falta_justificada",
+        "atraso",
+        "saida_antecipada",
+        "outro",
+      ],
+      occurrence_type: ["advertencia", "suspensao", "elogio", "observacao"],
       ocr_status: ["pendente", "processando", "concluido", "falhou"],
       payroll_adj_type: ["dsr_desconto", "he_extra", "outro"],
+      request_type: [
+        "ferias",
+        "folga",
+        "troca_turno",
+        "hora_extra",
+        "abono",
+        "outro",
+      ],
+      review_status: ["pendente", "aprovada", "recusada", "cancelada"],
       work_schedule_type: ["5x2", "6x1", "12x36", "escala", "outro"],
     },
   },

@@ -1,13 +1,16 @@
 import { ReactNode } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { Clock, History, LogOut } from "lucide-react";
+import { Clock, History, FileText, FileCheck2, CalendarDays, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { signOut, useAuth } from "@/hooks/useAuth";
 
 const NAV = [
-  { to: "/ponto", label: "Bater ponto", icon: Clock },
-  { to: "/meu-historico", label: "Meu histórico", icon: History },
+  { to: "/ponto", label: "Ponto", icon: Clock },
+  { to: "/meu-historico", label: "Histórico", icon: History },
+  { to: "/minhas-justificativas", label: "Justif.", icon: FileCheck2 },
+  { to: "/minhas-solicitacoes", label: "Pedidos", icon: CalendarDays },
+  { to: "/meus-documentos", label: "Docs", icon: FileText },
 ];
 
 export function FuncionarioLayout({ children }: { children: ReactNode }) {
@@ -36,7 +39,7 @@ export function FuncionarioLayout({ children }: { children: ReactNode }) {
       <main className="flex-1 max-w-3xl w-full mx-auto p-4 pb-24">{children}</main>
 
       <nav className="fixed bottom-0 inset-x-0 border-t bg-card">
-        <div className="max-w-3xl mx-auto grid grid-cols-2">
+        <div className="max-w-3xl mx-auto grid grid-cols-5">
           {NAV.map((item) => {
             const Icon = item.icon;
             const active = pathname.startsWith(item.to);
