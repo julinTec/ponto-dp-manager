@@ -829,7 +829,13 @@ export type Database = {
         | "exame_admissional"
         | "outro"
       admission_status: "em_analise" | "aprovado" | "rejeitado"
-      app_role: "super_admin" | "admin" | "revisor" | "funcionario"
+      app_role:
+        | "super_admin"
+        | "admin"
+        | "revisor"
+        | "funcionario"
+        | "dp"
+        | "gestor"
       batch_status:
         | "enviado"
         | "processando"
@@ -992,7 +998,14 @@ export const Constants = {
         "outro",
       ],
       admission_status: ["em_analise", "aprovado", "rejeitado"],
-      app_role: ["super_admin", "admin", "revisor", "funcionario"],
+      app_role: [
+        "super_admin",
+        "admin",
+        "revisor",
+        "funcionario",
+        "dp",
+        "gestor",
+      ],
       batch_status: [
         "enviado",
         "processando",
