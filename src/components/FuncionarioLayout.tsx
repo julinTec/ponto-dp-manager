@@ -4,6 +4,7 @@ import { Clock, History, FileText, FileCheck2, CalendarDays, LogOut } from "luci
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { signOut, useAuth } from "@/hooks/useAuth";
+import fluxorLogo from "@/assets/fluxor-logo.png";
 
 const NAV = [
   { to: "/ponto", label: "Ponto", icon: Clock },
