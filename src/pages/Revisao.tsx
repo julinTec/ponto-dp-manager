@@ -218,7 +218,7 @@ export default function Revisao() {
             <Button asChild variant="outline" size="sm"><Link to={`/relatorios?lote=${batchId}`}><BarChart3 className="h-4 w-4 mr-1" />Consolidado</Link></Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button size="sm"><Download className="h-4 w-4 mr-1" />Exportar</Button>
+                <Button size="sm" className="bg-gradient-primary shadow-sm"><Download className="h-4 w-4 mr-1" />Exportar</Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={exportarCSV}><FileText className="h-4 w-4 mr-2" />Exportar CSV</DropdownMenuItem>
