@@ -133,42 +133,18 @@ export default function Dashboard() {
 
   return (
     <AppLayout>
-      <div className="p-8 max-w-7xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="p-8 max-w-7xl mx-auto space-y-8">
+        <div className="flex items-end justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-            <p className="text-sm text-muted-foreground mt-1">Visão geral do Departamento Pessoal — mês de referência</p>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Painel executivo</p>
+            <h1 className="text-3xl font-bold text-foreground mt-1">Bem-vindo{profile?.nome ? `, ${profile.nome.split(" ")[0]}` : ""}</h1>
+            <p className="text-sm text-muted-foreground mt-1">Visão consolidada do mês de referência</p>
           </div>
           <div className="flex gap-2 items-center">
             <CompanyFilter value={companyFilter} onChange={setCompanyFilter} />
-            <Button asChild variant="outline">
-              <Link to="/lotes/novo?modo=single"><FileUp className="h-4 w-4 mr-2" />Folha única</Link>
-            </Button>
             <Button asChild>
-              <Link to="/lotes/novo?modo=lote"><Plus className="h-4 w-4 mr-2" />Novo lote</Link>
+              <Link to="/admissoes"><Plus className="h-4 w-4 mr-2" />Nova admissão</Link>
             </Button>
-          </div>
-        </div>
-
-        <div>
-          <h2 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">Lotes</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {cardsLote.map((c) => {
-              const Icon = c.icon;
-              return (
-                <Card key={c.label} className="p-5">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium">{c.label}</p>
-                      <p className="text-3xl font-bold text-foreground mt-2">{c.value}</p>
-                    </div>
-                    <div className={`h-10 w-10 rounded-lg bg-muted flex items-center justify-center ${c.color}`}>
-                      <Icon className="h-5 w-5" />
-                    </div>
-                  </div>
-                </Card>
-              );
-            })}
           </div>
         </div>
 
@@ -178,7 +154,7 @@ export default function Dashboard() {
             {cardsDP.map((c) => {
               const Icon = c.icon;
               const inner = (
-                <Card className="p-5 h-full hover:bg-muted/30 transition-colors">
+                <Card className="p-5 h-full hover:shadow-md hover:-translate-y-0.5 transition-all border-border/60">
                   <div className="flex items-start justify-between">
                     <div className="min-w-0">
                       <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium">{c.label}</p>
@@ -195,42 +171,40 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <Card className="overflow-hidden">
-          <div className="px-6 py-4 border-b flex items-center justify-between">
-            <h2 className="font-semibold text-foreground">Lotes recentes</h2>
-            <Button asChild variant="ghost" size="sm"><Link to="/lotes">Ver todos</Link></Button>
-          </div>
-          {loading ? (
-            <div className="p-12 text-center text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></div>
-          ) : batches.length === 0 ? (
-            <div className="p-12 text-center">
-              <FileStack className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-              <p className="text-foreground font-medium">Nenhum lote ainda</p>
-              <p className="text-sm text-muted-foreground mt-1">Crie seu primeiro lote enviando uma folha de ponto.</p>
-              <Button asChild className="mt-4"><Link to="/lotes/novo"><Plus className="h-4 w-4 mr-2" />Novo lote</Link></Button>
+        {batches.length > 0 && (
+          <Card className="overflow-hidden border-border/60">
+            <div className="px-6 py-4 border-b flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold text-foreground">Processamentos recentes</h2>
+                <p className="text-xs text-muted-foreground">Lotes de folhas de ponto importadas</p>
+              </div>
+              <Button asChild variant="ghost" size="sm"><Link to="/lotes">Ver todos</Link></Button>
             </div>
-          ) : (
-            <div className="divide-y">
-              {batches.map((b) => (
-                <Link key={b.id} to={`/lotes/${b.id}/revisao`} className="flex items-center justify-between px-6 py-4 hover:bg-muted/40 transition-colors">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="h-9 w-9 rounded-md bg-accent flex items-center justify-center text-accent-foreground shrink-0">
-                      <Clock className="h-4 w-4" />
+            {loading ? (
+              <div className="p-12 text-center text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></div>
+            ) : (
+              <div className="divide-y">
+                {batches.slice(0, 5).map((b) => (
+                  <Link key={b.id} to={`/lotes/${b.id}/revisao`} className="flex items-center justify-between px-6 py-3 hover:bg-muted/40 transition-colors">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-9 w-9 rounded-md bg-accent flex items-center justify-center text-accent-foreground shrink-0">
+                        <Clock className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-foreground truncate">{b.nome}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(b.created_at), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
+                          {" · "}{b.total_paginas} pág · {b.total_marcacoes} marcações
+                        </p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="font-medium text-foreground truncate">{b.nome}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {format(new Date(b.created_at), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
-                        {" · "}{b.total_paginas} pág · {b.total_marcacoes} marcações
-                      </p>
-                    </div>
-                  </div>
-                  <StatusBadge status={b.status} />
-                </Link>
-              ))}
-            </div>
-          )}
-        </Card>
+                    <StatusBadge status={b.status} />
+                  </Link>
+                ))}
+              </div>
+            )}
+          </Card>
+        )}
       </div>
     </AppLayout>
   );

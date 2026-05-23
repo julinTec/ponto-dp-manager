@@ -9,33 +9,33 @@
 
 @layer base {
   :root {
-    --background: 210 25% 98%;
-    --foreground: 222 47% 11%;
+    --background: 210 30% 98%;
+    --foreground: 215 35% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 215 35% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 215 35% 12%;
 
-    /* Azul corporativo Fluxor */
-    --primary: 217 91% 35%;
+    /* Azul petróleo Fluxor DP */
+    --primary: 200 78% 28%;
     --primary-foreground: 210 40% 98%;
-    --primary-glow: 217 91% 50%;
+    --primary-glow: 195 75% 42%;
 
-    --secondary: 215 25% 94%;
-    --secondary-foreground: 217 91% 25%;
+    --secondary: 210 25% 94%;
+    --secondary-foreground: 200 78% 22%;
 
-    --muted: 215 20% 95%;
+    --muted: 210 22% 95%;
     --muted-foreground: 215 16% 45%;
 
-    --accent: 217 91% 95%;
-    --accent-foreground: 217 91% 25%;
+    --accent: 195 70% 94%;
+    --accent-foreground: 200 78% 22%;
 
-    --destructive: 0 75% 50%;
+    --destructive: 0 72% 52%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 71% 38%;
+    --success: 158 64% 38%;
     --success-foreground: 0 0% 100%;
 
     --warning: 38 92% 48%;
@@ -44,31 +44,33 @@
     --info: 199 89% 45%;
     --info-foreground: 0 0% 100%;
 
-    --border: 215 20% 88%;
-    --input: 215 20% 88%;
-    --ring: 217 91% 45%;
+    --border: 215 20% 89%;
+    --input: 215 20% 89%;
+    --ring: 200 78% 35%;
 
-    --radius: 0.5rem;
+    --radius: 0.6rem;
 
     /* Status badges */
     --status-enviado: 215 16% 50%;
     --status-processando: 199 89% 45%;
     --status-aguardando: 38 92% 48%;
-    --status-revisado: 142 71% 38%;
-    --status-exportado: 217 91% 45%;
+    --status-revisado: 158 64% 38%;
+    --status-exportado: 200 78% 35%;
 
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
-    --shadow-card: 0 1px 3px 0 hsl(222 47% 11% / 0.05), 0 1px 2px 0 hsl(222 47% 11% / 0.03);
-    --shadow-elevated: 0 4px 16px -4px hsl(222 47% 11% / 0.08);
+    --gradient-hero: linear-gradient(135deg, hsl(200 78% 28%) 0%, hsl(195 75% 42%) 100%);
+    --shadow-card: 0 1px 3px 0 hsl(215 35% 12% / 0.04), 0 1px 2px 0 hsl(215 35% 12% / 0.03);
+    --shadow-elevated: 0 8px 24px -8px hsl(200 78% 20% / 0.12);
+    --shadow-premium: 0 10px 40px -10px hsl(200 78% 20% / 0.18);
 
-    --sidebar-background: 222 47% 11%;
-    --sidebar-foreground: 210 30% 88%;
-    --sidebar-primary: 217 91% 50%;
+    --sidebar-background: 215 32% 13%;
+    --sidebar-foreground: 210 25% 88%;
+    --sidebar-primary: 195 75% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 40% 18%;
+    --sidebar-accent: 215 28% 20%;
     --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 222 40% 18%;
-    --sidebar-ring: 217 91% 50%;
+    --sidebar-border: 215 28% 22%;
+    --sidebar-ring: 195 75% 50%;
   }
 
   .dark {

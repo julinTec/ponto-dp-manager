@@ -26,7 +26,8 @@ import MeuHistorico from "./pages/funcionario/MeuHistorico";
 
 const queryClient = new QueryClient();
 
-const GESTOR = ["super_admin", "admin", "revisor"] as const;
+const GESTOR = ["super_admin", "admin", "dp", "gestor", "revisor"] as const;
+const DP = ["super_admin", "admin", "dp"] as const;
 const FUNC = ["funcionario"] as const;
 
 const App = () => (
@@ -52,9 +53,9 @@ const App = () => (
           <Route path="/admissoes" element={<ProtectedRoute allow={[...GESTOR]}><Admissoes /></ProtectedRoute>} />
           <Route path="/admissoes/:id" element={<ProtectedRoute allow={[...GESTOR]}><AdmissaoDetalhe /></ProtectedRoute>} />
           <Route path="/documentos" element={<ProtectedRoute allow={[...GESTOR]}><Documentos /></ProtectedRoute>} />
-          <Route path="/usuarios" element={<ProtectedRoute allow={["super_admin","admin"]}><Usuarios /></ProtectedRoute>} />
+          <Route path="/usuarios" element={<ProtectedRoute allow={["super_admin","admin","dp"]}><Usuarios /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute allow={["super_admin"]}><SuperAdmin /></ProtectedRoute>} />
-          <Route path="/gestor/empresa" element={<ProtectedRoute allow={["super_admin","admin"]}><Empresa /></ProtectedRoute>} />
+          <Route path="/gestor/empresa" element={<ProtectedRoute allow={[...DP]}><Empresa /></ProtectedRoute>} />
           <Route path="/gestor/relatorios-ponto" element={<ProtectedRoute allow={[...GESTOR]}><RelatoriosPonto /></ProtectedRoute>} />
 
           <Route path="/gemini" element={<GeminiTest />} />
