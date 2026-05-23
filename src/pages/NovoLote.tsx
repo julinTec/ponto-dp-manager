@@ -214,7 +214,7 @@ export default function NovoLote() {
                   A folha será registrada com a data atual. Você pode ajustar mês de referência depois pela tela de revisão.
                 </p>
 
-                <Button type="submit" disabled={singleSubmitting || !singleFile} className="w-full">
+                <Button type="submit" disabled={singleSubmitting || !singleFile} className="w-full bg-gradient-primary shadow-sm">
                   {singleSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   Enviar folha e processar
                 </Button>
