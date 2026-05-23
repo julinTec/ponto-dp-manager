@@ -45,7 +45,8 @@ export default function Auth() {
       .eq("user_id", signIn.user.id);
     setLoading(false);
     const list = (roles ?? []).map((r: any) => r.role as string);
-    if (list.includes("funcionario") && !list.some((r) => ["admin", "super_admin", "revisor"].includes(r))) {
+    const gestaoRoles = ["admin", "super_admin", "dp", "gestor", "revisor"];
+    if (list.includes("funcionario") && !list.some((r) => gestaoRoles.includes(r))) {
       navigate("/ponto");
     } else {
       navigate("/");
