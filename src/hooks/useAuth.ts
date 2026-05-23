@@ -55,11 +55,13 @@ export function useAuth() {
 
   const isSuperAdmin = roles.includes("super_admin");
   const isAdmin = roles.includes("admin");
+  const isDp = roles.includes("dp");
+  const isGestor = roles.includes("gestor");
   const isRevisor = roles.includes("revisor");
   const isFuncionario = roles.includes("funcionario");
-  const isGestor = isSuperAdmin || isAdmin;
+  const isGestao = isSuperAdmin || isAdmin || isDp || isGestor;
 
-  return { session, user, profile, roles, isSuperAdmin, isAdmin, isRevisor, isFuncionario, isGestor, loading };
+  return { session, user, profile, roles, isSuperAdmin, isAdmin, isDp, isGestor, isRevisor, isFuncionario, isGestao, isGestor: isGestao, loading };
 }
 
 export async function signOut() {
