@@ -229,8 +229,8 @@ export default function Relatorios() {
 
 function KpiCard({ icon, label, value, tone = "ok" }: { icon: React.ReactNode; label: string; value: string; tone?: "ok" | "warn" }) {
   return (
-    <Card className="p-4 flex items-center gap-3">
-      <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${tone === "warn" ? "bg-warning/15 text-warning" : "bg-primary/10 text-primary"}`}>
+    <Card className="p-4 flex items-center gap-3 hover-lift">
+      <div className={`h-11 w-11 rounded-xl flex items-center justify-center ${tone === "warn" ? "bg-warning/15 text-warning" : "bg-primary/10 text-primary"}`}>
         {icon}
       </div>
       <div className="min-w-0">
