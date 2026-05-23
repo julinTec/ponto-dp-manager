@@ -105,7 +105,7 @@ export default function Funcionarios() {
           {items.map((e) => (
             <tr key={e.id} className="hover:bg-muted/30">
               <td className="px-6 py-3 font-medium text-foreground">
-                {e.nome}
+                <a href={`/funcionarios/${e.id}`} className="hover:underline">{e.nome}</a>
                 {e.status === "pendente_validacao" && <Badge variant="outline" className="ml-2 bg-warning/15 text-warning border-warning/30">Pendente</Badge>}
               </td>
               <td className="px-4 py-3 text-muted-foreground">{e.cpf ?? "—"}</td>

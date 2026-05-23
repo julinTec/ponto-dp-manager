@@ -23,6 +23,8 @@ import Empresa from "./pages/gestor/Empresa";
 import RelatoriosPonto from "./pages/gestor/RelatoriosPonto";
 import BaterPonto from "./pages/funcionario/BaterPonto";
 import MeuHistorico from "./pages/funcionario/MeuHistorico";
+import FichaFuncionario from "./pages/FichaFuncionario";
+import FechamentoMensal from "./pages/FechamentoMensal";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +51,8 @@ const App = () => (
           <Route path="/lotes/novo" element={<ProtectedRoute allow={[...GESTOR]}><NovoLote /></ProtectedRoute>} />
           <Route path="/lotes/:id/revisao" element={<ProtectedRoute allow={[...GESTOR]}><Revisao /></ProtectedRoute>} />
           <Route path="/funcionarios" element={<ProtectedRoute allow={[...GESTOR]}><Funcionarios /></ProtectedRoute>} />
+          <Route path="/funcionarios/:id" element={<ProtectedRoute allow={[...GESTOR]}><FichaFuncionario /></ProtectedRoute>} />
+          <Route path="/fechamento" element={<ProtectedRoute allow={[...DP]}><FechamentoMensal /></ProtectedRoute>} />
           <Route path="/relatorios" element={<ProtectedRoute allow={[...GESTOR]}><Relatorios /></ProtectedRoute>} />
           <Route path="/admissoes" element={<ProtectedRoute allow={[...GESTOR]}><Admissoes /></ProtectedRoute>} />
           <Route path="/admissoes/:id" element={<ProtectedRoute allow={[...GESTOR]}><AdmissaoDetalhe /></ProtectedRoute>} />
