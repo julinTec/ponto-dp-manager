@@ -4,15 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
-import { Card } from "@/components/ui/card";
+import { SectionCard } from "@/components/ui-kit/SectionCard";
+import { EmptyState } from "@/components/ui-kit/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { CompanyFilter } from "@/components/CompanyFilter";
 import { Loader2, CalendarCheck2, Lock, Unlock, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 const MESES = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 
@@ -106,41 +107,44 @@ export default function FechamentoMensal() {
 
   return (
     <AppLayout>
-      <div className="p-8 max-w-7xl mx-auto space-y-6">
+      <div className="p-6 sm:p-8 max-w-7xl mx-auto space-y-6">
         <PageHeader
           title="Fechamento mensal"
           subtitle="Consolidação de horas, faltas e ocorrências por funcionário"
+          eyebrow="Ponto"
           actions={<CompanyFilter value={companyFilter} onChange={setCompanyFilter} />}
         />
 
-        <Card className="p-4 flex flex-wrap items-end gap-3">
-          <div className="space-y-1">
-            <Label className="text-xs">Mês</Label>
-            <Select value={String(mes)} onValueChange={(v) => setMes(Number(v))}>
-              <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-              <SelectContent>{MESES.map((m, i) => <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>)}</SelectContent>
-            </Select>
+        <SectionCard>
+          <div className="p-4 flex flex-wrap items-end gap-3">
+            <div className="space-y-1">
+              <Label className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">Mês</Label>
+              <Select value={String(mes)} onValueChange={(v) => setMes(Number(v))}>
+                <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                <SelectContent>{MESES.map((m, i) => <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">Ano</Label>
+              <Select value={String(ano)} onValueChange={(v) => setAno(Number(v))}>
+                <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
+                <SelectContent>{anos.map((a) => <SelectItem key={a} value={String(a)}>{a}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="ml-auto text-xs text-muted-foreground">
+              {employees.length} funcionários · {Object.values(closures).filter((c: any) => c.status === "fechado").length} fechados
+            </div>
           </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Ano</Label>
-            <Select value={String(ano)} onValueChange={(v) => setAno(Number(v))}>
-              <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
-              <SelectContent>{anos.map((a) => <SelectItem key={a} value={String(a)}>{a}</SelectItem>)}</SelectContent>
-            </Select>
-          </div>
-        </Card>
+        </SectionCard>
 
         <div className="grid grid-cols-1 lg:grid-cols-[320px,1fr] gap-6">
-          <Card className="overflow-hidden h-fit">
-            <div className="px-4 py-3 border-b text-xs uppercase tracking-wider text-muted-foreground font-semibold">
-              Funcionários ({employees.length})
-            </div>
+          <SectionCard title="Funcionários" description={`${employees.length} ativos`} className="h-fit">
             {loadingList ? (
               <div className="p-8 text-center"><Loader2 className="h-4 w-4 animate-spin mx-auto" /></div>
             ) : employees.length === 0 ? (
-              <div className="p-8 text-center text-sm text-muted-foreground">Nenhum funcionário.</div>
+              <EmptyState icon={CalendarCheck2} title="Nenhum funcionário" />
             ) : (
-              <div className="max-h-[600px] overflow-auto divide-y">
+              <div className="max-h-[600px] overflow-auto divide-y divide-border/70 nice-scroll">
                 {employees.map((e) => {
                   const cls = closures[e.id];
                   const active = selectedEmp === e.id;
@@ -148,47 +152,59 @@ export default function FechamentoMensal() {
                     <button
                       key={e.id}
                       onClick={() => { setSelectedEmp(e.id); setParams({ employee: e.id }); }}
-                      className={`w-full text-left px-4 py-2.5 flex items-center justify-between hover:bg-muted/40 ${active ? "bg-accent/60" : ""}`}
+                      className={cn(
+                        "w-full text-left px-4 py-3 flex items-center justify-between gap-2 transition-colors",
+                        active ? "bg-primary/10 border-l-2 border-primary" : "hover:bg-muted/40 border-l-2 border-transparent",
+                      )}
                     >
                       <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{e.nome}</p>
+                        <p className={cn("text-sm font-medium truncate", active ? "text-primary" : "text-foreground")}>{e.nome}</p>
                         <p className="text-xs text-muted-foreground truncate">{e.cargo ?? "—"}</p>
                       </div>
-                      {cls?.status === "fechado" && <Badge className="bg-success/15 text-success border-success/30" variant="outline">Fechado</Badge>}
-                      {cls?.status === "reaberto" && <Badge variant="outline" className="bg-warning/15 text-warning border-warning/30">Reaberto</Badge>}
+                      {cls?.status === "fechado" && (
+                        <span className="chip bg-success/10 text-success border-success/20">
+                          <Lock className="h-3 w-3" /> Fechado
+                        </span>
+                      )}
+                      {cls?.status === "reaberto" && (
+                        <span className="chip bg-warning/10 text-warning border-warning/20">Reaberto</span>
+                      )}
                     </button>
                   );
                 })}
               </div>
             )}
-          </Card>
+          </SectionCard>
 
-          <Card className="p-6 min-h-[400px]">
+          <SectionCard className="min-h-[400px]">
+            <div className="p-6">
             {!selected ? (
-              <div className="h-full flex flex-col items-center justify-center text-center text-muted-foreground py-16">
-                <CalendarCheck2 className="h-10 w-10 mb-3" />
-                <p>Selecione um funcionário para visualizar o fechamento de {MESES[mes - 1]}/{ano}.</p>
-              </div>
+              <EmptyState
+                icon={CalendarCheck2}
+                title={`Selecione um funcionário`}
+                description={`Visualize o fechamento de ${MESES[mes - 1]}/${ano} ao escolher alguém na lista ao lado.`}
+              />
             ) : loadingPreview ? (
               <div className="py-16 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></div>
             ) : (
               <div className="space-y-6">
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div>
-                    <h2 className="text-xl font-semibold">{selected.nome}</h2>
-                    <p className="text-sm text-muted-foreground">{selected.cargo ?? "—"} · {MESES[mes - 1]}/{ano}</p>
+                    <p className="text-[11px] uppercase tracking-[0.08em] text-primary font-semibold">Fechamento · {MESES[mes - 1]}/{ano}</p>
+                    <h2 className="text-2xl font-bold text-foreground tracking-tight mt-0.5">{selected.nome}</h2>
+                    <p className="text-sm text-muted-foreground">{selected.cargo ?? "Sem cargo"}</p>
                   </div>
                   {currentClosure?.status === "fechado" && (
-                    <Badge className="bg-success/15 text-success border-success/30" variant="outline">
-                      <Lock className="h-3 w-3 mr-1" />Fechado em {new Date(currentClosure.fechado_em).toLocaleDateString("pt-BR")}
-                    </Badge>
+                    <span className="chip bg-success/10 text-success border-success/20">
+                      <Lock className="h-3 w-3" />Fechado em {new Date(currentClosure.fechado_em).toLocaleDateString("pt-BR")}
+                    </span>
                   )}
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <Stat label="Dias trabalhados" value={preview?.totais?.dias_trabalhados} />
                   <Stat label="Horas trabalhadas" value={preview?.totais?.horas_trabalhadas} suffix="h" />
-                  <Stat label="Horas extras" value={preview?.totais?.horas_extras} suffix="h" tone="success" />
+                  <Stat label="Horas extras" value={preview?.totais?.horas_extras} suffix="h" tone="premium" />
                   <Stat label="Horas faltantes" value={preview?.totais?.horas_faltantes} suffix="h" tone="destructive" />
                   <Stat label="Faltas" value={preview?.totais?.faltas} />
                   <Stat label="Faltas justificadas" value={preview?.totais?.faltas_justificadas} />
@@ -201,17 +217,17 @@ export default function FechamentoMensal() {
                 </div>
 
                 {canClose && (
-                  <div className="space-y-3 pt-4 border-t">
+                  <div className="space-y-3 pt-6 border-t border-border/70">
                     {currentClosure?.observacoes && (
-                      <div className="text-xs text-muted-foreground">
-                        <strong>Obs anteriores:</strong> {currentClosure.observacoes}
+                      <div className="text-xs text-muted-foreground bg-muted/40 rounded-xl px-3 py-2">
+                        <strong className="text-foreground">Obs anteriores:</strong> {currentClosure.observacoes}
                       </div>
                     )}
                     <div className="space-y-1">
-                      <Label className="text-xs">Observações do fechamento</Label>
+                      <Label className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">Observações do fechamento</Label>
                       <Textarea value={obs} onChange={(e) => setObs(e.target.value)} rows={2} placeholder="Opcional" />
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                       <Button variant="outline" onClick={loadPreview} disabled={loadingPreview}>
                         <RefreshCw className="h-4 w-4 mr-2" />Recalcular
                       </Button>
@@ -220,7 +236,7 @@ export default function FechamentoMensal() {
                           <Unlock className="h-4 w-4 mr-2" />Reabrir
                         </Button>
                       ) : (
-                        <Button onClick={fechar} disabled={acting}>
+                        <Button onClick={fechar} disabled={acting} className="bg-gradient-primary shadow-sm hover:opacity-95">
                           {acting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Lock className="h-4 w-4 mr-2" />}
                           Fechar mês
                         </Button>
@@ -230,20 +246,21 @@ export default function FechamentoMensal() {
                 )}
               </div>
             )}
-          </Card>
+            </div>
+          </SectionCard>
         </div>
       </div>
     </AppLayout>
   );
 }
 
-function Stat({ label, value, suffix = "", tone }: { label: string; value: number | undefined; suffix?: string; tone?: "success" | "destructive" }) {
+function Stat({ label, value, suffix = "", tone }: { label: string; value: number | undefined; suffix?: string; tone?: "premium" | "destructive" }) {
   const v = value ?? 0;
-  const color = tone === "success" ? "text-success" : tone === "destructive" ? "text-destructive" : "text-foreground";
+  const color = tone === "premium" ? "text-premium" : tone === "destructive" ? "text-destructive" : "text-foreground";
   return (
-    <div className="rounded-lg border bg-card p-3">
-      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{label}</p>
-      <p className={`mt-1 text-xl font-semibold tabular-nums ${color}`}>{Number(v).toLocaleString("pt-BR")}{suffix}</p>
+    <div className="rounded-xl border border-border/70 bg-muted/30 p-3.5">
+      <p className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground font-semibold">{label}</p>
+      <p className={`mt-1 text-xl font-bold tabular-nums tracking-tight ${color}`}>{Number(v).toLocaleString("pt-BR")}{suffix}</p>
     </div>
   );
 }
