@@ -27,8 +27,8 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
     title: "Ponto",
     items: [
       { to: "/gestor/relatorios-ponto", label: "Gestão de ponto", icon: MapPin },
+      { to: "/fechamento", label: "Fechamento mensal", icon: CalendarCheck2 },
       { to: "/relatorios", label: "Relatórios", icon: FileBarChart2 },
-      // Fechamento mensal entra na Fase 3
     ],
   },
   {
