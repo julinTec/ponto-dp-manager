@@ -154,7 +154,7 @@ export default function Relatorios() {
               </SelectContent>
             </Select>
           </div>
-          <Button onClick={() => gerar()} disabled={loading}>
+          <Button onClick={() => gerar()} disabled={loading} className="bg-gradient-primary shadow-sm">
             {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Gerar
           </Button>
           <Button variant="outline" onClick={exportar} disabled={linhas.length === 0}>
