@@ -219,6 +219,7 @@ export default function AdmissaoDetalhe() {
               <h2 className="font-semibold">Dados do funcionário</h2>
               <p className="text-xs text-muted-foreground mt-0.5">Revise os dados extraídos pela IA antes de aprovar</p>
             </div>
+            <div className="grid grid-cols-2 gap-3 text-sm">
               <Field label="Nome completo *" v={form.nome} on={(v) => setForm({ ...form, nome: v })} colSpan="col-span-2" />
               <Field label="CPF" v={form.cpf} on={(v) => setForm({ ...form, cpf: v })} />
               <Field label="RG" v={form.rg} on={(v) => setForm({ ...form, rg: v })} />
