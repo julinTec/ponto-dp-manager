@@ -92,10 +92,10 @@ export default function MinhasJustificativas() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold">Justificativas</h1>
+            <h1 className="text-xl font-semibold tracking-tight">Justificativas</h1>
             <p className="text-sm text-muted-foreground">Envie atestados e justifique ausências</p>
           </div>
-          <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" />Nova</Button>
+          <Button onClick={() => setOpen(true)} size="sm" className="bg-gradient-primary shadow-sm rounded-full"><Plus className="h-4 w-4 mr-1" />Nova</Button>
         </div>
 
         <Card className="overflow-hidden">

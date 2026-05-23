@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
+import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -152,13 +153,12 @@ export default function SuperAdmin() {
   return (
     <AppLayout>
       <div className="p-8 max-w-7xl mx-auto space-y-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Super Admin</h1>
-            <p className="text-sm text-muted-foreground mt-1">Gestão global de empresas</p>
-          </div>
-          <Button onClick={openNew}><Plus className="h-4 w-4" /> Nova empresa</Button>
-        </div>
+        <PageHeader
+          title="Super Admin"
+          subtitle="Gestão global de empresas"
+          actions={<Button onClick={openNew} className="bg-gradient-primary"><Plus className="h-4 w-4 mr-2" /> Nova empresa</Button>}
+        />
+
 
         <Card className="overflow-hidden">
           {loading ? (
@@ -185,7 +185,7 @@ export default function SuperAdmin() {
                     <td className="px-6 py-3 font-medium">{c.nome}</td>
                     <td className="px-4 py-3 text-muted-foreground">{c.cnpj ?? "—"}</td>
                     <td className="px-4 py-3">
-                      <span className={c.ativo ? "text-green-600" : "text-muted-foreground"}>
+                      <span className={`chip ${c.ativo ? "bg-success/10 text-success border-success/20" : "bg-muted text-muted-foreground border-border"}`}>
                         {c.ativo ? "Ativa" : "Suspensa"}
                       </span>
                     </td>

@@ -196,7 +196,7 @@ export default function Revisao() {
   return (
     <AppLayout>
       <div className="flex flex-col h-screen">
-        <div className="px-6 py-3 border-b bg-card flex items-center justify-between gap-4">
+        <div className="px-6 py-3 border-b border-border/60 bg-card/80 backdrop-blur sticky top-0 z-10 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <Button asChild variant="ghost" size="sm"><Link to="/lotes"><ArrowLeft className="h-4 w-4" /></Link></Button>
             <div className="min-w-0">
@@ -218,7 +218,7 @@ export default function Revisao() {
             <Button asChild variant="outline" size="sm"><Link to={`/relatorios?lote=${batchId}`}><BarChart3 className="h-4 w-4 mr-1" />Consolidado</Link></Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button size="sm"><Download className="h-4 w-4 mr-1" />Exportar</Button>
+                <Button size="sm" className="bg-gradient-primary shadow-sm"><Download className="h-4 w-4 mr-1" />Exportar</Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={exportarCSV}><FileText className="h-4 w-4 mr-2" />Exportar CSV</DropdownMenuItem>

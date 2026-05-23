@@ -225,7 +225,7 @@ export default function Documentos() {
             <span className="text-sm text-muted-foreground">{filtered.length} documento(s)</span>
           </div>
           {canEdit && (
-            <Button onClick={() => { setCreateCompanyId(null); setOpen(true); }}><Upload className="h-4 w-4 mr-2" />Enviar documentos</Button>
+            <Button onClick={() => { setCreateCompanyId(null); setOpen(true); }} className="bg-gradient-primary shadow-sm"><Upload className="h-4 w-4 mr-2" />Enviar documentos</Button>
           )}
         </div>
 

@@ -79,7 +79,7 @@ export default function Lotes() {
           actions={
             <>
               <Button asChild variant="outline"><Link to="/lotes/novo?modo=single"><FileUp className="h-4 w-4 mr-2" />Folha única</Link></Button>
-              <Button asChild><Link to="/lotes/novo?modo=lote"><Plus className="h-4 w-4 mr-2" />Novo lote</Link></Button>
+              <Button asChild className="bg-gradient-primary shadow-sm"><Link to="/lotes/novo?modo=lote"><Plus className="h-4 w-4 mr-2" />Novo lote</Link></Button>
             </>
           }
         />

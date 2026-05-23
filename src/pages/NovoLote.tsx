@@ -169,9 +169,9 @@ export default function NovoLote() {
         )}
 
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="grid grid-cols-2 w-full max-w-md">
-            <TabsTrigger value="single"><FileUp className="h-4 w-4 mr-2" />Folha única</TabsTrigger>
-            <TabsTrigger value="lote"><FileStack className="h-4 w-4 mr-2" />Lote</TabsTrigger>
+          <TabsList className="grid grid-cols-2 w-full max-w-md bg-card border border-border/60 rounded-xl p-1">
+            <TabsTrigger value="single" className="rounded-lg data-[state=active]:bg-gradient-primary data-[state=active]:text-white"><FileUp className="h-4 w-4 mr-2" />Folha única</TabsTrigger>
+            <TabsTrigger value="lote" className="rounded-lg data-[state=active]:bg-gradient-primary data-[state=active]:text-white"><FileStack className="h-4 w-4 mr-2" />Lote</TabsTrigger>
           </TabsList>
 
           {/* ---------------- Folha única ---------------- */}
@@ -182,7 +182,7 @@ export default function NovoLote() {
                   <Label>Folha de ponto (PDF ou imagem)</Label>
                   <label
                     htmlFor="single-file"
-                    className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-lg py-10 cursor-pointer hover:border-primary hover:bg-accent/30 transition-colors"
+                    className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-2xl py-12 cursor-pointer hover:border-primary hover:bg-primary/5 transition-all"
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={(e) => { e.preventDefault(); pickSingle(Array.from(e.dataTransfer.files)); }}
                   >
@@ -214,7 +214,7 @@ export default function NovoLote() {
                   A folha será registrada com a data atual. Você pode ajustar mês de referência depois pela tela de revisão.
                 </p>
 
-                <Button type="submit" disabled={singleSubmitting || !singleFile} className="w-full">
+                <Button type="submit" disabled={singleSubmitting || !singleFile} className="w-full bg-gradient-primary shadow-sm">
                   {singleSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   Enviar folha e processar
                 </Button>
@@ -251,7 +251,7 @@ export default function NovoLote() {
                   <Label>Arquivos (PDF ou imagens)</Label>
                   <label
                     htmlFor="files"
-                    className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-lg py-10 cursor-pointer hover:border-primary hover:bg-accent/30 transition-colors"
+                    className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-2xl py-12 cursor-pointer hover:border-primary hover:bg-primary/5 transition-all"
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={(e) => { e.preventDefault(); addFiles(Array.from(e.dataTransfer.files)); }}
                   >
@@ -278,7 +278,7 @@ export default function NovoLote() {
                   </div>
                 )}
 
-                <Button type="submit" disabled={submitting} className="w-full">
+                <Button type="submit" disabled={submitting} className="w-full bg-gradient-primary shadow-sm">
                   {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   Criar lote e processar
                 </Button>

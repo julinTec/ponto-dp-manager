@@ -3,6 +3,7 @@ import { Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
+import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -224,23 +225,21 @@ export default function Usuarios() {
   return (
     <AppLayout>
       <div className="p-8 max-w-7xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Usuários</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Gerencie acessos da equipe interna e dos funcionários que batem ponto.
-          </p>
-        </div>
+        <PageHeader
+          title="Usuários"
+          subtitle="Gerencie acessos da equipe interna e dos funcionários que batem ponto."
+        />
 
-        <Tabs defaultValue="equipe">
-          <TabsList>
-            <TabsTrigger value="equipe"><UserCog className="h-4 w-4 mr-2" />Equipe interna</TabsTrigger>
-            <TabsTrigger value="funcionarios"><UsersIcon className="h-4 w-4 mr-2" />Funcionários</TabsTrigger>
+        <Tabs defaultValue="equipe" className="space-y-4">
+          <TabsList className="bg-card border border-border/60 rounded-xl p-1">
+            <TabsTrigger value="equipe" className="rounded-lg data-[state=active]:bg-gradient-primary data-[state=active]:text-white"><UserCog className="h-4 w-4 mr-2" />Equipe interna</TabsTrigger>
+            <TabsTrigger value="funcionarios" className="rounded-lg data-[state=active]:bg-gradient-primary data-[state=active]:text-white"><UsersIcon className="h-4 w-4 mr-2" />Funcionários</TabsTrigger>
           </TabsList>
 
           {/* ====== EQUIPE INTERNA ====== */}
           <TabsContent value="equipe" className="space-y-4">
             <div className="flex justify-end">
-              <Button onClick={() => setOpen(true)}>
+              <Button onClick={() => setOpen(true)} className="bg-gradient-primary">
                 <UserPlus className="h-4 w-4 mr-2" /> Adicionar usuário
               </Button>
             </div>
@@ -326,7 +325,7 @@ export default function Usuarios() {
           {/* ====== FUNCIONÁRIOS ====== */}
           <TabsContent value="funcionarios" className="space-y-4">
             <div className="flex justify-end">
-              <Button onClick={() => setOpenFunc(true)}>
+              <Button onClick={() => setOpenFunc(true)} className="bg-gradient-primary">
                 <UserPlus className="h-4 w-4 mr-2" /> Adicionar funcionário
               </Button>
             </div>

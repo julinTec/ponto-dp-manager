@@ -162,7 +162,7 @@ export default function AdmissaoDetalhe() {
             admission.status === "em_analise" && (
               <>
                 <Button variant="outline" onClick={rejeitar}>Rejeitar</Button>
-                <Button onClick={aprovar} disabled={saving}>
+                <Button onClick={aprovar} disabled={saving} className="bg-gradient-primary shadow-sm">
                   {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   <CheckCircle2 className="h-4 w-4 mr-1" />Aprovar e cadastrar
                 </Button>
@@ -174,8 +174,11 @@ export default function AdmissaoDetalhe() {
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Documentos */}
           <Card className="overflow-hidden">
-            <div className="px-5 py-3 border-b flex items-center justify-between">
-              <h2 className="font-semibold">Checklist de documentos</h2>
+            <div className="px-5 py-4 border-b border-border/60 flex items-center justify-between bg-gradient-to-r from-muted/30 to-transparent">
+              <div>
+                <h2 className="font-semibold">Checklist de documentos</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">{docs.length} arquivos · {checklistPendentes} pendentes</p>
+              </div>
             </div>
             {docs.length === 0 ? (
               <div className="p-8 text-center text-muted-foreground text-sm">Nenhum documento</div>
@@ -212,7 +215,10 @@ export default function AdmissaoDetalhe() {
 
           {/* Cadastro pré-preenchido */}
           <Card className="p-5 space-y-4">
-            <h2 className="font-semibold">Dados do funcionário</h2>
+            <div>
+              <h2 className="font-semibold">Dados do funcionário</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">Revise os dados extraídos pela IA antes de aprovar</p>
+            </div>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <Field label="Nome completo *" v={form.nome} on={(v) => setForm({ ...form, nome: v })} colSpan="col-span-2" />
               <Field label="CPF" v={form.cpf} on={(v) => setForm({ ...form, cpf: v })} />

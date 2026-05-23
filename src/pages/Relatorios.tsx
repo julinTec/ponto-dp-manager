@@ -154,7 +154,7 @@ export default function Relatorios() {
               </SelectContent>
             </Select>
           </div>
-          <Button onClick={() => gerar()} disabled={loading}>
+          <Button onClick={() => gerar()} disabled={loading} className="bg-gradient-primary shadow-sm">
             {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Gerar
           </Button>
           <Button variant="outline" onClick={exportar} disabled={linhas.length === 0}>
@@ -229,8 +229,8 @@ export default function Relatorios() {
 
 function KpiCard({ icon, label, value, tone = "ok" }: { icon: React.ReactNode; label: string; value: string; tone?: "ok" | "warn" }) {
   return (
-    <Card className="p-4 flex items-center gap-3">
-      <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${tone === "warn" ? "bg-warning/15 text-warning" : "bg-primary/10 text-primary"}`}>
+    <Card className="p-4 flex items-center gap-3 hover-lift">
+      <div className={`h-11 w-11 rounded-xl flex items-center justify-center ${tone === "warn" ? "bg-warning/15 text-warning" : "bg-primary/10 text-primary"}`}>
         {icon}
       </div>
       <div className="min-w-0">
