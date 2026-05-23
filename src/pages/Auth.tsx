@@ -101,8 +101,8 @@ export default function Auth() {
       {/* Right: form */}
       <main className="flex flex-col items-center justify-center p-6 sm:p-12">
         <div className="lg:hidden flex items-center gap-3 mb-8">
-          <div className="h-12 px-4 rounded-xl bg-white border border-border flex items-center justify-center shadow-premium">
-            <img src={fluxorLogo} alt="Fluxor" className="h-7 w-auto" />
+          <div className="h-12 flex items-center justify-center">
+            <img src={fluxorLogo} alt="Fluxor" className="h-10 w-auto" />
           </div>
           <div>
             <p className="text-xs text-muted-foreground leading-tight">Departamento Pessoal</p>

@@ -29,8 +29,8 @@ export function FuncionarioLayout({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-30 border-b border-border/70 bg-card/85 backdrop-blur">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="h-10 px-2.5 rounded-xl bg-white border border-border flex items-center justify-center shadow-sm shrink-0">
-              <img src={fluxorLogo} alt="Fluxor" className="h-5 w-auto" />
+            <div className="h-10 flex items-center justify-center shrink-0">
+              <img src={fluxorLogo} alt="Fluxor" className="h-8 w-auto" />
             </div>
             <div className="min-w-0">
               <p className="font-semibold text-sm leading-tight text-foreground truncate">{profile?.nome ?? "Funcionário"}</p>
