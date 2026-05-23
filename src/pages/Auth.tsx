@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Clock, Loader2, ShieldCheck, Sparkles, BarChart3 } from "lucide-react";
+import fluxorLogo from "@/assets/fluxor-logo.png";
 
 const signInSchema = z.object({
   email: z.string().trim().email("E-mail inválido").max(255),
