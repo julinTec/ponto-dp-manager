@@ -153,13 +153,12 @@ export default function SuperAdmin() {
   return (
     <AppLayout>
       <div className="p-8 max-w-7xl mx-auto space-y-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Super Admin</h1>
-            <p className="text-sm text-muted-foreground mt-1">Gestão global de empresas</p>
-          </div>
-          <Button onClick={openNew}><Plus className="h-4 w-4" /> Nova empresa</Button>
-        </div>
+        <PageHeader
+          title="Super Admin"
+          subtitle="Gestão global de empresas"
+          actions={<Button onClick={openNew} className="bg-gradient-primary"><Plus className="h-4 w-4 mr-2" /> Nova empresa</Button>}
+        />
+
 
         <Card className="overflow-hidden">
           {loading ? (
