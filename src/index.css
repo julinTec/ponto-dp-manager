@@ -1,76 +1,95 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Fluxor Ponto - Design System
-   Visual profissional para escritórios de DP.
-   Paleta: azul corporativo + cinza neutro. Todas as cores em HSL.
-*/
+/* Fluxor DP — Premium SaaS Design System (HSL only) */
 
 @layer base {
   :root {
-    --background: 210 30% 98%;
-    --foreground: 215 35% 12%;
+    /* Surfaces */
+    --background: 220 25% 97%;          /* #F6F7FB */
+    --foreground: 222 47% 11%;          /* #0F172A */
 
-    --card: 0 0% 100%;
-    --card-foreground: 215 35% 12%;
+    --card: 0 0% 100%;                  /* #FFFFFF */
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 215 35% 12%;
+    --popover-foreground: 222 47% 11%;
 
-    /* Azul petróleo Fluxor DP */
-    --primary: 200 78% 28%;
-    --primary-foreground: 210 40% 98%;
-    --primary-glow: 195 75% 42%;
+    /* Brand */
+    --primary: 221 83% 53%;             /* #2563EB */
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 217 91% 60%;        /* #3B82F6 */
 
-    --secondary: 210 25% 94%;
-    --secondary-foreground: 200 78% 22%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 210 22% 95%;
-    --muted-foreground: 215 16% 45%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 215 16% 47%;    /* #64748B */
 
-    --accent: 195 70% 94%;
-    --accent-foreground: 200 78% 22%;
+    --accent: 220 14% 96%;
+    --accent-foreground: 222 47% 11%;
 
-    --destructive: 0 72% 52%;
+    /* Premium accent (emerald) */
+    --premium: 160 84% 39%;             /* #10B981 */
+    --premium-foreground: 0 0% 100%;
+    --premium-soft: 152 81% 96%;
+
+    /* Feedback */
+    --destructive: 0 84% 60%;           /* #EF4444 */
     --destructive-foreground: 0 0% 100%;
+    --destructive-soft: 0 86% 97%;
 
-    --success: 158 64% 38%;
+    --success: 160 84% 39%;
     --success-foreground: 0 0% 100%;
+    --success-soft: 152 81% 96%;
 
-    --warning: 38 92% 48%;
+    --warning: 38 92% 50%;              /* #F59E0B */
     --warning-foreground: 0 0% 100%;
+    --warning-soft: 48 96% 95%;
 
-    --info: 199 89% 45%;
+    --info: 221 83% 53%;
     --info-foreground: 0 0% 100%;
+    --info-soft: 214 95% 96%;
 
-    --border: 215 20% 89%;
-    --input: 215 20% 89%;
-    --ring: 200 78% 35%;
+    /* Borders & inputs */
+    --border: 214 32% 91%;              /* #E2E8F0 */
+    --input: 214 32% 91%;
+    --ring: 221 83% 53%;
 
-    --radius: 0.6rem;
+    --radius: 1rem;                      /* 2xl-ish */
 
-    /* Status badges */
-    --status-enviado: 215 16% 50%;
-    --status-processando: 199 89% 45%;
-    --status-aguardando: 38 92% 48%;
-    --status-revisado: 158 64% 38%;
-    --status-exportado: 200 78% 35%;
-
-    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
-    --gradient-hero: linear-gradient(135deg, hsl(200 78% 28%) 0%, hsl(195 75% 42%) 100%);
-    --shadow-card: 0 1px 3px 0 hsl(215 35% 12% / 0.04), 0 1px 2px 0 hsl(215 35% 12% / 0.03);
-    --shadow-elevated: 0 8px 24px -8px hsl(200 78% 20% / 0.12);
-    --shadow-premium: 0 10px 40px -10px hsl(200 78% 20% / 0.18);
-
-    --sidebar-background: 215 32% 13%;
-    --sidebar-foreground: 210 25% 88%;
-    --sidebar-primary: 195 75% 50%;
+    /* Sidebar — premium dark */
+    --sidebar-background: 222 47% 11%;  /* #0F172A */
+    --sidebar-foreground: 215 25% 80%;
+    --sidebar-primary: 221 83% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 215 28% 20%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 215 28% 22%;
-    --sidebar-ring: 195 75% 50%;
+    --sidebar-accent: 217 33% 17%;      /* slate-800 */
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 217 33% 20%;
+    --sidebar-ring: 221 83% 60%;
+
+    /* Status tokens */
+    --status-enviado: 215 16% 47%;
+    --status-processando: 221 83% 53%;
+    --status-aguardando: 38 92% 50%;
+    --status-revisado: 160 84% 39%;
+    --status-exportado: 221 83% 53%;
+
+    /* Gradients & shadows */
+    --gradient-primary: linear-gradient(135deg, hsl(221 83% 53%), hsl(217 91% 60%));
+    --gradient-premium: linear-gradient(135deg, hsl(160 84% 39%), hsl(174 72% 45%));
+    --gradient-surface: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(220 25% 98%) 100%);
+    --gradient-sidebar: linear-gradient(180deg, hsl(222 47% 11%) 0%, hsl(222 47% 8%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(222 47% 11%) 0%, hsl(221 60% 22%) 60%, hsl(221 83% 35%) 100%);
+
+    --shadow-xs: 0 1px 2px 0 hsl(222 47% 11% / 0.04);
+    --shadow-card: 0 1px 2px 0 hsl(222 47% 11% / 0.04), 0 1px 3px 0 hsl(222 47% 11% / 0.06);
+    --shadow-elevated: 0 4px 14px -4px hsl(222 47% 11% / 0.10), 0 2px 6px -2px hsl(222 47% 11% / 0.06);
+    --shadow-premium: 0 18px 40px -16px hsl(221 83% 30% / 0.25), 0 6px 14px -6px hsl(222 47% 11% / 0.08);
+    --shadow-ring-primary: 0 0 0 4px hsl(221 83% 53% / 0.12);
   }
 
   .dark {
@@ -80,7 +99,7 @@
     --card-foreground: 210 40% 98%;
     --popover: 222 47% 9%;
     --popover-foreground: 210 40% 98%;
-    --primary: 217 91% 55%;
+    --primary: 221 83% 60%;
     --primary-foreground: 222 47% 11%;
     --primary-glow: 217 91% 65%;
     --secondary: 222 40% 14%;
@@ -107,9 +126,55 @@
   * {
     @apply border-border;
   }
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "cv11", "ss01";
-    font-variation-settings: "opsz" 32;
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-feature-settings: "cv11", "ss01", "ss03";
+  }
+
+  h1, h2, h3, h4 {
+    letter-spacing: -0.018em;
   }
 }
+
+@layer components {
+  .surface-card {
+    @apply bg-card rounded-2xl border border-border/70 shadow-[var(--shadow-card)];
+  }
+  .surface-elevated {
+    @apply bg-card rounded-2xl border border-border/70 shadow-[var(--shadow-elevated)];
+  }
+  .hover-lift {
+    @apply transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[var(--shadow-elevated)];
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border;
+  }
+  .section-title {
+    @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground;
+  }
+  .page-bg {
+    background:
+      radial-gradient(1200px 400px at 0% -10%, hsl(221 83% 53% / 0.04), transparent 60%),
+      radial-gradient(900px 300px at 100% 0%, hsl(160 84% 39% / 0.04), transparent 60%),
+      hsl(var(--background));
+  }
+}
+
+/* Custom scrollbars */
+@layer utilities {
+  .nice-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+  .nice-scroll::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 8px; }
+  .nice-scroll::-webkit-scrollbar-thumb:hover { background: hsl(215 16% 70%); }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up { animation: fade-in-up 280ms ease-out both; }
