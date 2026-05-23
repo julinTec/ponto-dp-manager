@@ -1,0 +1,1 @@
+DELETE FROM public.timesheet_batches WHERE id = '96915d1b-b885-4e58-b082-780705c3a107';
