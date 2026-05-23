@@ -174,8 +174,11 @@ export default function AdmissaoDetalhe() {
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Documentos */}
           <Card className="overflow-hidden">
-            <div className="px-5 py-3 border-b flex items-center justify-between">
-              <h2 className="font-semibold">Checklist de documentos</h2>
+            <div className="px-5 py-4 border-b border-border/60 flex items-center justify-between bg-gradient-to-r from-muted/30 to-transparent">
+              <div>
+                <h2 className="font-semibold">Checklist de documentos</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">{docs.length} arquivos · {checklistPendentes} pendentes</p>
+              </div>
             </div>
             {docs.length === 0 ? (
               <div className="p-8 text-center text-muted-foreground text-sm">Nenhum documento</div>
