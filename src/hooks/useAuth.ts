@@ -56,12 +56,13 @@ export function useAuth() {
   const isSuperAdmin = roles.includes("super_admin");
   const isAdmin = roles.includes("admin");
   const isDp = roles.includes("dp");
-  const isGestor = roles.includes("gestor");
+  const isGestorRole = roles.includes("gestor");
   const isRevisor = roles.includes("revisor");
   const isFuncionario = roles.includes("funcionario");
-  const isGestao = isSuperAdmin || isAdmin || isDp || isGestor;
+  // isGestor = qualquer perfil de gestão (mantido por compatibilidade)
+  const isGestor = isSuperAdmin || isAdmin || isDp || isGestorRole;
 
-  return { session, user, profile, roles, isSuperAdmin, isAdmin, isDp, isGestor, isRevisor, isFuncionario, isGestao, isGestor: isGestao, loading };
+  return { session, user, profile, roles, isSuperAdmin, isAdmin, isDp, isGestorRole, isRevisor, isFuncionario, isGestor, loading };
 }
 
 export async function signOut() {
