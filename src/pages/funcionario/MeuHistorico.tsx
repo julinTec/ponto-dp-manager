@@ -43,7 +43,10 @@ export default function MeuHistorico() {
 
   return (
     <FuncionarioLayout>
-      <h1 className="text-xl font-bold mb-4">Meu histórico</h1>
+      <div className="mb-4">
+        <h1 className="text-xl font-semibold tracking-tight">Meu histórico</h1>
+        <p className="text-sm text-muted-foreground">Visualize seus registros de ponto por mês</p>
+      </div>
 
       <Card className="p-3 mb-4 grid grid-cols-2 gap-3">
         <div>
