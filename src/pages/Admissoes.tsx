@@ -91,8 +91,9 @@ export default function Admissoes() {
           tamanho_bytes: item.file.size,
         }).select().single();
         if (insErr) throw insErr;
-        // dispara OCR em background
-        supabase.functions.invoke("ocr-admission-doc", { body: { admission_document_id: docRow.id } }).catch(console.error);
+        // PDF -> OpenAI (admission-pdf-extract); imagem -> Gemini (ocr-admission-doc)
+        const fn = item.file.type === "application/pdf" ? "admission-pdf-extract" : "ocr-admission-doc";
+        supabase.functions.invoke(fn, { body: { admission_document_id: docRow.id } }).catch(console.error);
       }
 
       toast.success("Admissão criada. OCR em andamento.");
