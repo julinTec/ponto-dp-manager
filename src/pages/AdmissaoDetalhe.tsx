@@ -162,7 +162,7 @@ export default function AdmissaoDetalhe() {
             admission.status === "em_analise" && (
               <>
                 <Button variant="outline" onClick={rejeitar}>Rejeitar</Button>
-                <Button onClick={aprovar} disabled={saving}>
+                <Button onClick={aprovar} disabled={saving} className="bg-gradient-primary shadow-sm">
                   {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   <CheckCircle2 className="h-4 w-4 mr-1" />Aprovar e cadastrar
                 </Button>
