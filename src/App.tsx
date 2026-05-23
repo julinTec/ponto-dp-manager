@@ -26,7 +26,8 @@ import MeuHistorico from "./pages/funcionario/MeuHistorico";
 
 const queryClient = new QueryClient();
 
-const GESTOR = ["super_admin", "admin", "revisor"] as const;
+const GESTOR = ["super_admin", "admin", "dp", "gestor", "revisor"] as const;
+const DP = ["super_admin", "admin", "dp"] as const;
 const FUNC = ["funcionario"] as const;
 
 const App = () => (
