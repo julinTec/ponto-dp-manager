@@ -2,17 +2,23 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
-import { Card } from "@/components/ui/card";
+import { SectionCard } from "@/components/ui-kit/SectionCard";
+import { EmptyState } from "@/components/ui-kit/EmptyState";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Check, X, FileText, CheckCircle2 } from "lucide-react";
+import { Loader2, Check, X, FileText, CheckCircle2, Paperclip } from "lucide-react";
 import { CompanyFilter } from "@/components/CompanyFilter";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { format } from "date-fns";
+
+function initials(name?: string | null) {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
+}
 
 interface Row {
   id: string;
@@ -90,29 +96,39 @@ export default function Aprovacoes() {
   function renderList(items: Row[], kind: "just" | "req") {
     if (loading) return <div className="p-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></div>;
     if (items.length === 0) return (
-      <div className="p-12 text-center text-muted-foreground">
-        <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-success" />
-        <p>Sem pendências.</p>
-      </div>
+      <EmptyState
+        icon={CheckCircle2}
+        title="Sem pendências"
+        description={kind === "just" ? "Nenhuma justificativa aguardando aprovação." : "Nenhum pedido pendente da equipe."}
+      />
     );
     return (
-      <div className="divide-y">
+      <div className="divide-y divide-border/70">
         {items.map((j) => (
-          <div key={j.id} className="p-4 flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <p className="font-medium text-sm">{j.employee?.nome ?? "Funcionário"}</p>
-                <Badge variant="outline" className="capitalize">{j.tipo.replace("_", " ")}</Badge>
-                {j.attachment_path && <FileText className="h-3.5 w-3.5 text-muted-foreground" />}
+          <div key={j.id} className="p-4 sm:px-6 flex items-start justify-between gap-3 hover:bg-muted/30 transition-colors">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className="h-10 w-10 rounded-xl bg-gradient-primary text-primary-foreground flex items-center justify-center text-xs font-semibold shrink-0">
+                {initials(j.employee?.nome)}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {format(new Date(j.data_inicio), "dd/MM/yyyy")}
-                {j.data_fim && ` → ${format(new Date(j.data_fim), "dd/MM/yyyy")}`}
-              </p>
-              {j.motivo && <p className="text-xs mt-1.5 text-foreground/80">{j.motivo}</p>}
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="font-medium text-sm text-foreground">{j.employee?.nome ?? "Funcionário"}</p>
+                  <span className="chip bg-primary/10 text-primary border-primary/20 capitalize">{j.tipo.replace("_", " ")}</span>
+                  {j.attachment_path && (
+                    <span className="chip bg-muted text-muted-foreground border-border">
+                      <Paperclip className="h-3 w-3" /> Anexo
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {format(new Date(j.data_inicio), "dd/MM/yyyy")}
+                  {j.data_fim && ` → ${format(new Date(j.data_fim), "dd/MM/yyyy")}`}
+                </p>
+                {j.motivo && <p className="text-xs mt-2 text-foreground/80 italic">"{j.motivo}"</p>}
+              </div>
             </div>
             <div className="flex items-center gap-1 shrink-0">
-              <Button size="sm" variant="outline" disabled={acting === j.id}
+              <Button size="sm" className="bg-premium hover:bg-premium/90 text-premium-foreground" disabled={acting === j.id}
                 onClick={() => { setReviewing({ kind, row: j, action: "aprovada" }); setComment(""); }}>
                 <Check className="h-4 w-4 mr-1" />Aprovar
               </Button>
@@ -129,20 +145,21 @@ export default function Aprovacoes() {
 
   return (
     <AppLayout>
-      <div className="p-8 max-w-7xl mx-auto space-y-6">
+      <div className="p-6 sm:p-8 max-w-7xl mx-auto space-y-6">
         <PageHeader
           title="Aprovações"
           subtitle="Justificativas e solicitações pendentes da equipe"
+          eyebrow="Pessoas"
           actions={<CompanyFilter value={companyFilter} onChange={setCompanyFilter} />}
         />
 
         <Tabs defaultValue="justs">
-          <TabsList>
-            <TabsTrigger value="justs">Justificativas ({justs.length})</TabsTrigger>
-            <TabsTrigger value="reqs">Solicitações ({reqs.length})</TabsTrigger>
+          <TabsList className="bg-muted/60 p-1 rounded-xl">
+            <TabsTrigger value="justs" className="rounded-lg">Justificativas ({justs.length})</TabsTrigger>
+            <TabsTrigger value="reqs" className="rounded-lg">Solicitações ({reqs.length})</TabsTrigger>
           </TabsList>
-          <TabsContent value="justs"><Card className="overflow-hidden">{renderList(justs, "just")}</Card></TabsContent>
-          <TabsContent value="reqs"><Card className="overflow-hidden">{renderList(reqs, "req")}</Card></TabsContent>
+          <TabsContent value="justs" className="mt-4"><SectionCard>{renderList(justs, "just")}</SectionCard></TabsContent>
+          <TabsContent value="reqs" className="mt-4"><SectionCard>{renderList(reqs, "req")}</SectionCard></TabsContent>
         </Tabs>
 
         <Dialog open={!!reviewing} onOpenChange={(v) => { if (!v) setReviewing(null); }}>

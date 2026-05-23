@@ -4,19 +4,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
-import { Card } from "@/components/ui/card";
+import { SectionCard } from "@/components/ui-kit/SectionCard";
+import { EmptyState } from "@/components/ui-kit/EmptyState";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, UserPlus, FileText, Loader2, Upload, X } from "lucide-react";
+import { Plus, UserPlus, FileText, Loader2, Upload, X, Sparkles } from "lucide-react";
 import { CompanyFilter, CompanyPicker } from "@/components/CompanyFilter";
 import { toast } from "sonner";
-import { ConfidenceBadge } from "@/components/ConfidenceBadge";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 const TIPOS = [
   { value: "ficha", label: "Ficha de admissão" },
@@ -108,53 +107,73 @@ export default function Admissoes() {
     }
   }
 
+  const statusTone = (s: string) =>
+    s === "aprovado" ? "bg-success/10 text-success border-success/20"
+    : s === "rejeitado" ? "bg-destructive/10 text-destructive border-destructive/20"
+    : "bg-warning/10 text-warning border-warning/20";
+
   return (
     <AppLayout>
-      <div className="p-8 max-w-7xl mx-auto space-y-6">
+      <div className="p-6 sm:p-8 max-w-7xl mx-auto space-y-6">
         <PageHeader
-          title="Admissão de Funcionários"
-          subtitle="Envio de documentos com leitura automática para cadastro do funcionário"
+          title="Admissão de funcionários"
+          subtitle="Envio de documentos com leitura automática por IA"
+          eyebrow="Pessoas"
           actions={
             <div className="flex items-center gap-2">
               <CompanyFilter value={companyFilter} onChange={setCompanyFilter} />
-              {canEdit && <Button onClick={() => { setCreateCompanyId(null); setOpen(true); }}><Plus className="h-4 w-4 mr-2" />Nova admissão</Button>}
+              {canEdit && (
+                <Button onClick={() => { setCreateCompanyId(null); setOpen(true); }} className="bg-gradient-primary shadow-sm hover:opacity-95">
+                  <Plus className="h-4 w-4 mr-2" />Nova admissão
+                </Button>
+              )}
             </div>
           }
         />
 
-        <Card className="overflow-hidden">
+        <SectionCard
+          title="Admissões em andamento"
+          description="Acompanhe leitura por IA, revisão do DP e aprovação"
+        >
           {loading ? (
             <div className="p-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" /></div>
           ) : list.length === 0 ? (
-            <div className="p-12 text-center">
-              <UserPlus className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-              <p className="text-foreground font-medium">Nenhuma admissão em andamento</p>
-              <p className="text-sm text-muted-foreground mt-1">Inicie uma nova admissão enviando os documentos do candidato.</p>
-            </div>
+            <EmptyState
+              icon={UserPlus}
+              title="Nenhuma admissão em andamento"
+              description="Inicie uma nova admissão enviando os documentos do candidato. A IA extrai os dados automaticamente."
+              action={canEdit ? <Button onClick={() => { setCreateCompanyId(null); setOpen(true); }} className="bg-gradient-primary"><Plus className="h-4 w-4 mr-2" />Nova admissão</Button> : null}
+            />
           ) : (
-            <div className="divide-y">
+            <div className="divide-y divide-border/70">
               {list.map((a) => (
-                <Link key={a.id} to={`/admissoes/${a.id}`} className="flex items-center justify-between px-6 py-4 hover:bg-muted/40">
+                <Link key={a.id} to={`/admissoes/${a.id}`} className="flex items-center justify-between px-6 py-4 hover:bg-muted/40 transition-colors">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="h-10 w-10 rounded-md bg-accent flex items-center justify-center text-accent-foreground shrink-0">
+                    <div className="h-11 w-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
                       <FileText className="h-5 w-5" />
                     </div>
                     <div className="min-w-0">
-                      <p className="font-medium text-foreground truncate">
-                        {a.dados_extraidos?.nome ?? "Aguardando leitura..."}
+                      <p className="font-medium text-foreground truncate flex items-center gap-2">
+                        {a.dados_extraidos?.nome ?? "Aguardando leitura…"}
+                        {!a.dados_extraidos?.nome && (
+                          <span className="chip bg-info/10 text-info border-info/20"><Sparkles className="h-3 w-3" /> IA processando</span>
+                        )}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         {format(new Date(a.created_at), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
                         {a.dados_extraidos?.cargo && ` · ${a.dados_extraidos.cargo}`}
                       </p>
                     </div>
                   </div>
-                  <Badge variant="outline">{STATUS_LABEL[a.status] ?? a.status}</Badge>
+                  <span className={cn("chip", statusTone(a.status))}>
+                    <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                    {STATUS_LABEL[a.status] ?? a.status}
+                  </span>
                 </Link>
               ))}
             </div>
           )}
-        </Card>
+        </SectionCard>
 
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setFiles([]); }}>
           <DialogContent className="max-w-2xl">
@@ -166,28 +185,34 @@ export default function Admissoes() {
                   <CompanyPicker value={createCompanyId} onChange={setCreateCompanyId} />
                 </div>
               )}
-              <Label>Documentos</Label>
-              <label htmlFor="adm-files" className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-lg py-8 cursor-pointer hover:border-primary hover:bg-accent/30 transition-colors"
+              <Label>Documentos do candidato</Label>
+              <label
+                htmlFor="adm-files"
+                className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-2xl py-10 cursor-pointer hover:border-primary hover:bg-primary/5 transition-all bg-muted/30"
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => { e.preventDefault(); addFiles(Array.from(e.dataTransfer.files)); }}
               >
-                <Upload className="h-7 w-7 text-muted-foreground mb-2" />
-                <p className="text-sm font-medium">Selecione ou arraste documentos</p>
-                <p className="text-xs text-muted-foreground mt-1">PDF/JPG/PNG · até 20MB cada</p>
+                <div className="h-12 w-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-3">
+                  <Upload className="h-5 w-5" />
+                </div>
+                <p className="text-sm font-semibold text-foreground">Arraste arquivos ou clique para enviar</p>
+                <p className="text-xs text-muted-foreground mt-1">PDF, JPG ou PNG · até 20MB cada</p>
                 <input id="adm-files" type="file" multiple accept="application/pdf,image/*" className="hidden"
                   onChange={(e) => addFiles(Array.from(e.target.files ?? []))} />
               </label>
               {files.length > 0 && (
-                <div className="space-y-2 max-h-64 overflow-auto">
+                <div className="space-y-2 max-h-64 overflow-auto nice-scroll">
                   {files.map((f, i) => (
-                    <div key={i} className="flex items-center gap-2 p-2 bg-muted/40 rounded-md">
-                      <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <span className="text-sm flex-1 truncate">{f.file.name}</span>
+                    <div key={i} className="flex items-center gap-2 p-2.5 bg-muted/40 rounded-xl border border-border/70">
+                      <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                        <FileText className="h-4 w-4" />
+                      </div>
+                      <span className="text-sm flex-1 truncate font-medium text-foreground">{f.file.name}</span>
                       <Select value={f.tipo} onValueChange={(v) => setFiles((p) => p.map((x, j) => j === i ? { ...x, tipo: v } : x))}>
                         <SelectTrigger className="h-8 w-44 text-xs"><SelectValue /></SelectTrigger>
                         <SelectContent>{TIPOS.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
                       </Select>
-                      <button type="button" onClick={() => setFiles(files.filter((_, j) => j !== i))} className="text-muted-foreground hover:text-destructive">
+                      <button type="button" onClick={() => setFiles(files.filter((_, j) => j !== i))} className="text-muted-foreground hover:text-destructive p-1">
                         <X className="h-4 w-4" />
                       </button>
                     </div>
@@ -197,7 +222,7 @@ export default function Admissoes() {
             </div>
             <DialogFooter>
               <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
-              <Button onClick={criar} disabled={submitting}>
+              <Button onClick={criar} disabled={submitting} className="bg-gradient-primary">
                 {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Criar admissão
               </Button>
