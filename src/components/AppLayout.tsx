@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { signOut, useAuth } from "@/hooks/useAuth";
 import { ReactNode, useState } from "react";
+import fluxorLogo from "@/assets/fluxor-logo.png";
 
 type NavItem = { to: string; label: string; icon: any };
 
