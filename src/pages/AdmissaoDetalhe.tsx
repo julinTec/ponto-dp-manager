@@ -215,8 +215,10 @@ export default function AdmissaoDetalhe() {
 
           {/* Cadastro pré-preenchido */}
           <Card className="p-5 space-y-4">
-            <h2 className="font-semibold">Dados do funcionário</h2>
-            <div className="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <h2 className="font-semibold">Dados do funcionário</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">Revise os dados extraídos pela IA antes de aprovar</p>
+            </div>
               <Field label="Nome completo *" v={form.nome} on={(v) => setForm({ ...form, nome: v })} colSpan="col-span-2" />
               <Field label="CPF" v={form.cpf} on={(v) => setForm({ ...form, cpf: v })} />
               <Field label="RG" v={form.rg} on={(v) => setForm({ ...form, rg: v })} />
