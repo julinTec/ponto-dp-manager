@@ -251,7 +251,7 @@ export default function NovoLote() {
                   <Label>Arquivos (PDF ou imagens)</Label>
                   <label
                     htmlFor="files"
-                    className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-lg py-10 cursor-pointer hover:border-primary hover:bg-accent/30 transition-colors"
+                    className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-2xl py-12 cursor-pointer hover:border-primary hover:bg-primary/5 transition-all"
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={(e) => { e.preventDefault(); addFiles(Array.from(e.dataTransfer.files)); }}
                   >
