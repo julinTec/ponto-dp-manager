@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { signOut, useAuth } from "@/hooks/useAuth";
 import { ReactNode, useState } from "react";
+import fluxorLogo from "@/assets/fluxor-logo.png";
 
 type NavItem = { to: string; label: string; icon: any };
 
@@ -142,12 +143,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const Brand = (
     <div className="px-5 pt-5 pb-4 border-b border-sidebar-border/60">
       <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-premium">
-          <Clock className="h-5 w-5 text-primary-foreground" />
+        <div className="h-12 px-3 rounded-xl bg-white flex items-center justify-center shadow-premium">
+          <img src={fluxorLogo} alt="Fluxor" className="h-7 w-auto" />
         </div>
         <div>
-          <h1 className="font-bold text-[15px] leading-tight text-sidebar-foreground tracking-tight">Fluxor DP</h1>
-          <p className="text-[11px] text-sidebar-foreground/50">Plataforma de pessoal</p>
+          <p className="text-[11px] text-sidebar-foreground/50 leading-tight">Departamento Pessoal</p>
+          <p className="text-[11px] text-sidebar-foreground/40 leading-tight">Inteligência · Gestão · Crescimento</p>
         </div>
       </div>
     </div>

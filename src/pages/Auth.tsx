@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Clock, Loader2, ShieldCheck, Sparkles, BarChart3 } from "lucide-react";
+import fluxorLogo from "@/assets/fluxor-logo.png";
 
 const signInSchema = z.object({
   email: z.string().trim().email("E-mail inválido").max(255),
@@ -57,12 +58,12 @@ export default function Auth() {
         <div className="absolute -left-16 -bottom-20 h-72 w-72 rounded-full bg-premium/20 blur-3xl" />
 
         <div className="relative flex items-center gap-3">
-          <div className="h-11 w-11 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center">
-            <Clock className="h-5 w-5" />
+          <div className="h-12 px-4 rounded-xl bg-white/95 flex items-center justify-center shadow-premium">
+            <img src={fluxorLogo} alt="Fluxor" className="h-7 w-auto" />
           </div>
           <div>
-            <h1 className="text-lg font-bold leading-tight tracking-tight">Fluxor DP</h1>
-            <p className="text-xs text-white/60">Gestão de pessoas e ponto</p>
+            <p className="text-xs text-white/70 leading-tight">Departamento Pessoal</p>
+            <p className="text-[11px] text-white/50 leading-tight">Inteligência · Gestão · Crescimento</p>
           </div>
         </div>
 
@@ -100,12 +101,12 @@ export default function Auth() {
       {/* Right: form */}
       <main className="flex flex-col items-center justify-center p-6 sm:p-12">
         <div className="lg:hidden flex items-center gap-3 mb-8">
-          <div className="h-11 w-11 rounded-xl bg-gradient-primary flex items-center justify-center shadow-premium">
-            <Clock className="h-5 w-5 text-primary-foreground" />
+          <div className="h-12 px-4 rounded-xl bg-white border border-border flex items-center justify-center shadow-premium">
+            <img src={fluxorLogo} alt="Fluxor" className="h-7 w-auto" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-foreground leading-tight">Fluxor DP</h1>
-            <p className="text-xs text-muted-foreground">Gestão de pessoas e ponto</p>
+            <p className="text-xs text-muted-foreground leading-tight">Departamento Pessoal</p>
+            <p className="text-[11px] text-muted-foreground/70 leading-tight">Inteligência · Gestão · Crescimento</p>
           </div>
         </div>
 

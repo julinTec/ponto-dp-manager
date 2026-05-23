@@ -4,6 +4,7 @@ import { Clock, History, FileText, FileCheck2, CalendarDays, LogOut } from "luci
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { signOut, useAuth } from "@/hooks/useAuth";
+import fluxorLogo from "@/assets/fluxor-logo.png";
 
 const NAV = [
   { to: "/ponto", label: "Ponto", icon: Clock },
@@ -28,8 +29,8 @@ export function FuncionarioLayout({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-30 border-b border-border/70 bg-card/85 backdrop-blur">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="h-10 w-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-premium shrink-0">
-              <Clock className="h-5 w-5 text-primary-foreground" />
+            <div className="h-10 px-2.5 rounded-xl bg-white border border-border flex items-center justify-center shadow-sm shrink-0">
+              <img src={fluxorLogo} alt="Fluxor" className="h-5 w-auto" />
             </div>
             <div className="min-w-0">
               <p className="font-semibold text-sm leading-tight text-foreground truncate">{profile?.nome ?? "Funcionário"}</p>
