@@ -185,7 +185,7 @@ export default function SuperAdmin() {
                     <td className="px-6 py-3 font-medium">{c.nome}</td>
                     <td className="px-4 py-3 text-muted-foreground">{c.cnpj ?? "—"}</td>
                     <td className="px-4 py-3">
-                      <span className={c.ativo ? "text-green-600" : "text-muted-foreground"}>
+                      <span className={`chip ${c.ativo ? "bg-success/10 text-success border-success/20" : "bg-muted text-muted-foreground border-border"}`}>
                         {c.ativo ? "Ativa" : "Suspensa"}
                       </span>
                     </td>
