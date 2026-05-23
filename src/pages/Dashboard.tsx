@@ -3,12 +3,15 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge, BatchStatus } from "@/components/StatusBadge";
+import { MetricCard } from "@/components/ui-kit/MetricCard";
+import { SectionCard } from "@/components/ui-kit/SectionCard";
+import { EmptyState } from "@/components/ui-kit/EmptyState";
+import { Timeline, TimelineItem } from "@/components/ui-kit/Timeline";
 import {
-  FileStack, Clock, CheckCircle2, AlertCircle, Plus, Loader2, FileUp,
-  Users, FileText, CalendarX, TrendingUp, AlertTriangle,
+  FileStack, Clock, Plus, Loader2,
+  Users, FileText, CalendarX, TrendingUp, AlertTriangle, UserPlus, Sparkles, Activity,
 } from "lucide-react";
 import { CompanyFilter } from "@/components/CompanyFilter";
 import { format } from "date-fns";
@@ -26,11 +29,9 @@ interface Batch {
 export default function Dashboard() {
   const { profile, isSuperAdmin } = useAuth();
   const [batches, setBatches] = useState<Batch[]>([]);
-  const [counts, setCounts] = useState<Record<BatchStatus, number>>({
-    enviado: 0, processando: 0, aguardando_revisao: 0, revisado: 0, exportado: 0,
-  });
   const [funcionariosCount, setFuncionariosCount] = useState(0);
   const [docsPendentes, setDocsPendentes] = useState(0);
+  const [admissoesAbertas, setAdmissoesAbertas] = useState(0);
   const [stats, setStats] = useState({
     faltas_just: 0, faltas_injust: 0, he: 0, dsr: 0, inconsistencias: 0,
   });
@@ -40,12 +41,11 @@ export default function Dashboard() {
   useEffect(() => {
     if (!profile?.company_id && !isSuperAdmin) return;
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.company_id, isSuperAdmin, companyFilter]);
 
   async function load() {
     setLoading(true);
-
-    // Período: mês corrente
     const hoje = new Date();
     const mes = hoje.getMonth() + 1;
     const ano = hoje.getFullYear();
@@ -55,7 +55,6 @@ export default function Dashboard() {
     const filterCompany = <T extends { eq: (col: string, val: any) => T }>(q: T) =>
       companyFilter ? q.eq("company_id", companyFilter) : q;
 
-    // batch_ids do filtro de empresa (para filtrar time_entries via batch)
     let batchIdsForEntries: string[] | null = null;
     if (companyFilter) {
       const { data: bs } = await supabase
@@ -77,28 +76,24 @@ export default function Dashboard() {
 
     const [
       { data: batchesData },
-      { data: allStatus },
       { count: empCount },
       { count: docsCount },
+      { count: admCount },
       { data: entries },
       { data: adjustments },
     ] = await Promise.all([
       filterCompany(supabase.from("timesheet_batches").select("id, nome, status, total_paginas, total_marcacoes, created_at").order("created_at", { ascending: false }).limit(8) as any),
-      filterCompany(supabase.from("timesheet_batches").select("status") as any),
       filterCompany(supabase.from("employees").select("id", { count: "exact", head: true }).eq("status", "ativo") as any),
       filterCompany(supabase.from("employee_documents").select("id", { count: "exact", head: true }).eq("status", "pendente_revisao") as any),
+      filterCompany(supabase.from("employee_admissions").select("id", { count: "exact", head: true }).neq("status", "aprovado") as any),
       entriesQ,
       filterCompany(supabase.from("payroll_adjustments").select("tipo, valor_horas").eq("tipo", "dsr_desconto").gte("data", inicio).lt("data", fim) as any),
     ]);
 
     setBatches((batchesData ?? []) as Batch[]);
-
-    const c: any = { enviado: 0, processando: 0, aguardando_revisao: 0, revisado: 0, exportado: 0 };
-    (allStatus ?? []).forEach((b: any) => { c[b.status] = (c[b.status] ?? 0) + 1; });
-    setCounts(c);
-
     setFuncionariosCount(empCount ?? 0);
     setDocsPendentes(docsCount ?? 0);
+    setAdmissoesAbertas(admCount ?? 0);
 
     let fj = 0, fi = 0, he = 0, inc = 0;
     for (const e of entries ?? []) {
@@ -115,79 +110,94 @@ export default function Dashboard() {
     setLoading(false);
   }
 
-  const cardsLote = [
-    { label: "Aguardando revisão", value: counts.aguardando_revisao, icon: AlertCircle, color: "text-warning" },
-    { label: "Processando", value: counts.processando, icon: Loader2, color: "text-info" },
-    { label: "Revisados", value: counts.revisado, icon: CheckCircle2, color: "text-success" },
-    { label: "Total de lotes", value: Object.values(counts).reduce((a, b) => a + b, 0), icon: FileStack, color: "text-primary" },
-  ];
-  const cardsDP = [
-    { label: "Funcionários ativos", value: funcionariosCount, icon: Users, color: "text-primary", to: "/funcionarios" },
-    { label: "Documentos pendentes", value: docsPendentes, icon: FileText, color: "text-warning", to: "/documentos" },
-    { label: "Faltas justificadas (mês)", value: stats.faltas_just, icon: CalendarX, color: "text-muted-foreground" },
-    { label: "Faltas injustificadas (mês)", value: stats.faltas_injust, icon: CalendarX, color: stats.faltas_injust > 0 ? "text-destructive" : "text-muted-foreground" },
-    { label: "Horas extras (mês)", value: `${stats.he.toFixed(1)}h`, icon: TrendingUp, color: "text-success" },
-    { label: "DSR a descontar (mês)", value: `${stats.dsr.toFixed(1)}h`, icon: TrendingUp, color: stats.dsr > 0 ? "text-warning" : "text-muted-foreground" },
-    { label: "Inconsistências (mês)", value: stats.inconsistencias, icon: AlertTriangle, color: stats.inconsistencias > 0 ? "text-warning" : "text-muted-foreground" },
-  ];
+  const mesLabel = format(new Date(), "MMMM 'de' yyyy", { locale: ptBR });
+
+  const timelineItems: TimelineItem[] = batches.slice(0, 5).map((b) => ({
+    id: b.id,
+    title: b.nome,
+    description: `${b.total_paginas} págs · ${b.total_marcacoes} marcações`,
+    time: format(new Date(b.created_at), "dd 'de' MMM, HH:mm", { locale: ptBR }),
+    tone: b.status === "revisado" || b.status === "exportado" ? "premium" : b.status === "aguardando_revisao" ? "warning" : "primary",
+  }));
 
   return (
     <AppLayout>
-      <div className="p-8 max-w-7xl mx-auto space-y-8">
-        <div className="flex items-end justify-between flex-wrap gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Painel executivo</p>
-            <h1 className="text-3xl font-bold text-foreground mt-1">Bem-vindo{profile?.nome ? `, ${profile.nome.split(" ")[0]}` : ""}</h1>
-            <p className="text-sm text-muted-foreground mt-1">Visão consolidada do mês de referência</p>
-          </div>
-          <div className="flex gap-2 items-center">
-            <CompanyFilter value={companyFilter} onChange={setCompanyFilter} />
-            <Button asChild>
-              <Link to="/admissoes"><Plus className="h-4 w-4 mr-2" />Nova admissão</Link>
-            </Button>
-          </div>
-        </div>
-
-        <div>
-          <h2 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">Departamento Pessoal</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {cardsDP.map((c) => {
-              const Icon = c.icon;
-              const inner = (
-                <Card className="p-5 h-full hover:shadow-md hover:-translate-y-0.5 transition-all border-border/60">
-                  <div className="flex items-start justify-between">
-                    <div className="min-w-0">
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium">{c.label}</p>
-                      <p className="text-2xl font-bold text-foreground mt-2 tabular-nums">{c.value}</p>
-                    </div>
-                    <div className={`h-10 w-10 rounded-lg bg-muted flex items-center justify-center ${c.color}`}>
-                      <Icon className="h-5 w-5" />
-                    </div>
-                  </div>
-                </Card>
-              );
-              return c.to ? <Link key={c.label} to={c.to}>{inner}</Link> : <div key={c.label}>{inner}</div>;
-            })}
-          </div>
-        </div>
-
-        {batches.length > 0 && (
-          <Card className="overflow-hidden border-border/60">
-            <div className="px-6 py-4 border-b flex items-center justify-between">
-              <div>
-                <h2 className="font-semibold text-foreground">Processamentos recentes</h2>
-                <p className="text-xs text-muted-foreground">Lotes de folhas de ponto importadas</p>
+      <div className="p-6 sm:p-8 max-w-7xl mx-auto space-y-8">
+        {/* Hero header */}
+        <section className="relative overflow-hidden rounded-2xl bg-gradient-hero text-primary-foreground p-6 sm:p-8 shadow-premium">
+          <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary-glow/30 blur-3xl" />
+          <div className="absolute -left-10 -bottom-16 h-44 w-44 rounded-full bg-premium/20 blur-3xl" />
+          <div className="relative flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+            <div className="min-w-0">
+              <div className="inline-flex items-center gap-2 chip bg-white/10 border-white/15 text-white/90 mb-3">
+                <Sparkles className="h-3 w-3" /> Painel executivo · {mesLabel}
               </div>
-              <Button asChild variant="ghost" size="sm"><Link to="/lotes">Ver todos</Link></Button>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+                Bem-vindo{profile?.nome ? `, ${profile.nome.split(" ")[0]}` : ""}
+              </h1>
+              <p className="text-sm text-white/70 mt-2 max-w-xl">
+                Visão consolidada de pessoas, ponto e fechamento. Acompanhe pendências e tome decisões em segundos.
+              </p>
             </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="bg-white/10 border border-white/15 rounded-xl">
+                <CompanyFilter value={companyFilter} onChange={setCompanyFilter} />
+              </div>
+              <Button asChild className="bg-white text-foreground hover:bg-white/90 shadow-sm">
+                <Link to="/admissoes"><Plus className="h-4 w-4 mr-2" />Nova admissão</Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+
+        {/* Metrics */}
+        <section>
+          <div className="flex items-end justify-between mb-3">
+            <h2 className="section-title">Indicadores do mês</h2>
+            {loading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <MetricCard label="Funcionários ativos" value={funcionariosCount} icon={Users} tone="primary" to="/funcionarios" />
+            <MetricCard label="Admissões em andamento" value={admissoesAbertas} icon={UserPlus} tone="info" to="/admissoes" />
+            <MetricCard label="Documentos pendentes" value={docsPendentes} icon={FileText} tone="warning" to="/documentos" />
+            <MetricCard label="Atestados/Faltas just." value={stats.faltas_just} icon={CalendarX} tone="muted" to="/aprovacoes" />
+            <MetricCard label="Faltas injustificadas" value={stats.faltas_injust} icon={CalendarX} tone={stats.faltas_injust > 0 ? "destructive" : "muted"} />
+            <MetricCard label="Horas extras" value={`${stats.he.toFixed(1)}h`} icon={TrendingUp} tone="premium" />
+            <MetricCard label="DSR a descontar" value={`${stats.dsr.toFixed(1)}h`} icon={Activity} tone={stats.dsr > 0 ? "warning" : "muted"} />
+            <MetricCard label="Inconsistências" value={stats.inconsistencias} icon={AlertTriangle} tone={stats.inconsistencias > 0 ? "warning" : "muted"} to="/relatorios" />
+          </div>
+        </section>
+
+        {/* Lower grid */}
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <SectionCard
+            className="lg:col-span-2"
+            title="Processamentos recentes"
+            description="Lotes de folhas de ponto importadas"
+            actions={
+              <Button asChild variant="ghost" size="sm" className="text-primary hover:text-primary">
+                <Link to="/lotes">Ver todos</Link>
+              </Button>
+            }
+          >
             {loading ? (
               <div className="p-12 text-center text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></div>
+            ) : batches.length === 0 ? (
+              <EmptyState
+                icon={FileStack}
+                title="Nenhum lote processado ainda"
+                description="As folhas de ponto importadas aparecerão aqui assim que forem enviadas."
+              />
             ) : (
-              <div className="divide-y">
+              <div className="divide-y divide-border/70">
                 {batches.slice(0, 5).map((b) => (
-                  <Link key={b.id} to={`/lotes/${b.id}/revisao`} className="flex items-center justify-between px-6 py-3 hover:bg-muted/40 transition-colors">
+                  <Link
+                    key={b.id}
+                    to={`/lotes/${b.id}/revisao`}
+                    className="flex items-center justify-between px-6 py-3.5 hover:bg-muted/40 transition-colors"
+                  >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="h-9 w-9 rounded-md bg-accent flex items-center justify-center text-accent-foreground shrink-0">
+                      <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
                         <Clock className="h-4 w-4" />
                       </div>
                       <div className="min-w-0">
@@ -203,8 +213,18 @@ export default function Dashboard() {
                 ))}
               </div>
             )}
-          </Card>
-        )}
+          </SectionCard>
+
+          <SectionCard title="Atividades recentes" description="Últimos eventos do sistema">
+            <div className="p-6">
+              {timelineItems.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">Sem atividade recente.</p>
+              ) : (
+                <Timeline items={timelineItems} />
+              )}
+            </div>
+          </SectionCard>
+        </section>
       </div>
     </AppLayout>
   );

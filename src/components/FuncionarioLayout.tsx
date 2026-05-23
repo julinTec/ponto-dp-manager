@@ -13,33 +13,44 @@ const NAV = [
   { to: "/meus-documentos", label: "Docs", icon: FileText },
 ];
 
+function initials(name?: string | null) {
+  if (!name) return "U";
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "U";
+}
+
 export function FuncionarioLayout({ children }: { children: ReactNode }) {
   const { profile } = useAuth();
   const { pathname } = useLocation();
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <header className="border-b bg-card">
+    <div className="min-h-screen flex flex-col page-bg">
+      <header className="sticky top-0 z-30 border-b border-border/70 bg-card/85 backdrop-blur">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="h-10 w-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-premium shrink-0">
               <Clock className="h-5 w-5 text-primary-foreground" />
             </div>
-            <div>
-              <p className="font-semibold text-sm leading-tight">{profile?.nome ?? "Funcionário"}</p>
-              <p className="text-[11px] text-muted-foreground">{profile?.email}</p>
+            <div className="min-w-0">
+              <p className="font-semibold text-sm leading-tight text-foreground truncate">{profile?.nome ?? "Funcionário"}</p>
+              <p className="text-[11px] text-muted-foreground truncate">{profile?.email}</p>
             </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={signOut}>
-            <LogOut className="h-4 w-4 mr-1" /> Sair
-          </Button>
+          <div className="flex items-center gap-2">
+            <div className="hidden sm:flex h-9 w-9 rounded-full bg-gradient-primary text-primary-foreground items-center justify-center text-xs font-semibold">
+              {initials(profile?.nome)}
+            </div>
+            <Button variant="ghost" size="sm" onClick={signOut} className="text-muted-foreground hover:text-foreground">
+              <LogOut className="h-4 w-4 mr-1" /> Sair
+            </Button>
+          </div>
         </div>
       </header>
 
-      <main className="flex-1 max-w-3xl w-full mx-auto p-4 pb-24">{children}</main>
+      <main className="flex-1 max-w-3xl w-full mx-auto p-4 pb-28 animate-fade-in-up">{children}</main>
 
-      <nav className="fixed bottom-0 inset-x-0 border-t bg-card">
-        <div className="max-w-3xl mx-auto grid grid-cols-5">
+      <nav className="fixed bottom-0 inset-x-0 z-40 border-t border-border/70 bg-card/90 backdrop-blur pb-[env(safe-area-inset-bottom)]">
+        <div className="max-w-3xl mx-auto grid grid-cols-5 px-2 py-2">
           {NAV.map((item) => {
             const Icon = item.icon;
             const active = pathname.startsWith(item.to);
@@ -48,11 +59,11 @@ export function FuncionarioLayout({ children }: { children: ReactNode }) {
                 key={item.to}
                 to={item.to}
                 className={cn(
-                  "flex flex-col items-center gap-1 py-3 text-xs font-medium",
-                  active ? "text-primary" : "text-muted-foreground"
+                  "flex flex-col items-center justify-center gap-1 py-2 rounded-xl text-[11px] font-medium transition-colors",
+                  active ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 )}
               >
-                <Icon className="h-5 w-5" />
+                <Icon className={cn("h-[20px] w-[20px]", active && "text-primary")} />
                 {item.label}
               </NavLink>
             );
