@@ -3,16 +3,23 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
-import { Card } from "@/components/ui/card";
+import { SectionCard } from "@/components/ui-kit/SectionCard";
+import { EmptyState } from "@/components/ui-kit/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { Plus, Loader2, Users as UsersIcon, CheckCircle2, Trash2 } from "lucide-react";
+import { Plus, Loader2, Users as UsersIcon, CheckCircle2, Trash2, Pencil } from "lucide-react";
 import { CompanyFilter, CompanyPicker } from "@/components/CompanyFilter";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+
+function initials(name?: string | null) {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
+}
 
 interface Employee {
   id: string; nome: string; cpf: string | null; funcao: string | null;
@@ -85,73 +92,104 @@ export default function Funcionarios() {
   function renderTable(items: Employee[], pendentesView = false) {
     if (loading) return <div className="p-12 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></div>;
     if (items.length === 0) return (
-      <div className="p-12 text-center">
-        <UsersIcon className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-        <p className="text-foreground font-medium">{pendentesView ? "Nenhum funcionário pendente" : "Nenhum funcionário cadastrado"}</p>
-      </div>
+      <EmptyState
+        icon={UsersIcon}
+        title={pendentesView ? "Nenhum funcionário pendente" : "Nenhum funcionário cadastrado"}
+        description={pendentesView ? "Validações de admissão aparecerão aqui." : "Adicione um novo funcionário para começar."}
+      />
     );
     return (
-      <table className="w-full text-sm">
-        <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
-          <tr>
-            <th className="text-left px-6 py-3 font-medium">Nome</th>
-            <th className="text-left px-4 py-3 font-medium">CPF</th>
-            <th className="text-left px-4 py-3 font-medium">Função</th>
-            <th className="text-left px-4 py-3 font-medium">Jornada</th>
-            <th className="text-right px-4 py-3 font-medium">Ações</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y">
-          {items.map((e) => (
-            <tr key={e.id} className="hover:bg-muted/30">
-              <td className="px-6 py-3 font-medium text-foreground">
-                <a href={`/funcionarios/${e.id}`} className="hover:underline">{e.nome}</a>
-                {e.status === "pendente_validacao" && <Badge variant="outline" className="ml-2 bg-warning/15 text-warning border-warning/30">Pendente</Badge>}
-              </td>
-              <td className="px-4 py-3 text-muted-foreground">{e.cpf ?? "—"}</td>
-              <td className="px-4 py-3 text-muted-foreground">{e.funcao ?? "—"}</td>
-              <td className="px-4 py-3 text-muted-foreground">{e.jornada_padrao_horas ?? 8}h</td>
-              <td className="px-4 py-3 text-right space-x-2">
-                {canEdit && pendentesView && (
-                  <Button size="sm" variant="outline" onClick={() => validar(e)}>
-                    <CheckCircle2 className="h-3.5 w-3.5 mr-1" />Validar
-                  </Button>
-                )}
-                {canEdit && (
-                  <>
-                    <Button size="sm" variant="ghost" onClick={() => { setEditing(e); setOpen(true); }}>Editar</Button>
-                    <Button size="sm" variant="ghost" onClick={() => remover(e)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
-                  </>
-                )}
-              </td>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/40 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+            <tr>
+              <th className="text-left px-6 py-3 font-semibold">Funcionário</th>
+              <th className="text-left px-4 py-3 font-semibold">CPF</th>
+              <th className="text-left px-4 py-3 font-semibold">Função</th>
+              <th className="text-left px-4 py-3 font-semibold">Jornada</th>
+              <th className="text-left px-4 py-3 font-semibold">Status</th>
+              <th className="text-right px-4 py-3 font-semibold">Ações</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="divide-y divide-border/70">
+            {items.map((e) => (
+              <tr key={e.id} className="hover:bg-muted/30 transition-colors">
+                <td className="px-6 py-3">
+                  <a href={`/funcionarios/${e.id}`} className="flex items-center gap-3 group">
+                    <div className="h-9 w-9 rounded-xl bg-gradient-primary text-primary-foreground flex items-center justify-center text-xs font-semibold shrink-0">
+                      {initials(e.nome)}
+                    </div>
+                    <span className="font-medium text-foreground group-hover:text-primary truncate">{e.nome}</span>
+                  </a>
+                </td>
+                <td className="px-4 py-3 text-muted-foreground tabular-nums">{e.cpf ?? "—"}</td>
+                <td className="px-4 py-3 text-muted-foreground">{e.funcao ?? "—"}</td>
+                <td className="px-4 py-3 text-muted-foreground tabular-nums">{e.jornada_padrao_horas ?? 8}h</td>
+                <td className="px-4 py-3">
+                  <span className={cn(
+                    "chip capitalize",
+                    e.status === "ativo" && "bg-success/10 text-success border-success/20",
+                    e.status === "pendente_validacao" && "bg-warning/10 text-warning border-warning/20",
+                    e.status === "inativo" && "bg-muted text-muted-foreground border-border",
+                  )}>
+                    <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                    {e.status.replace("_", " ")}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-right space-x-1">
+                  {canEdit && pendentesView && (
+                    <Button size="sm" variant="outline" onClick={() => validar(e)}>
+                      <CheckCircle2 className="h-3.5 w-3.5 mr-1" />Validar
+                    </Button>
+                  )}
+                  {canEdit && (
+                    <>
+                      <Button size="sm" variant="ghost" onClick={() => { setEditing(e); setOpen(true); }}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => remover(e)}>
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </Button>
+                    </>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     );
   }
 
   return (
     <AppLayout>
-      <div className="p-8 max-w-7xl mx-auto space-y-6">
+      <div className="p-6 sm:p-8 max-w-7xl mx-auto space-y-6">
         <PageHeader
           title="Funcionários"
           subtitle="Cadastro e validação de funcionários"
           actions={
             <div className="flex items-center gap-2">
               <CompanyFilter value={companyFilter} onChange={setCompanyFilter} />
-              {canEdit && <Button onClick={() => { setEditing(null); setCreateCompanyId(null); setOpen(true); }}><Plus className="h-4 w-4 mr-2" />Novo</Button>}
+              {canEdit && (
+                <Button onClick={() => { setEditing(null); setCreateCompanyId(null); setOpen(true); }} className="bg-gradient-primary shadow-sm hover:opacity-95">
+                  <Plus className="h-4 w-4 mr-2" />Novo funcionário
+                </Button>
+              )}
             </div>
           }
         />
 
         <Tabs defaultValue="ativos">
-          <TabsList>
-            <TabsTrigger value="ativos">Ativos ({ativos.length})</TabsTrigger>
-            <TabsTrigger value="pendentes">Pendentes de validação ({pendentes.length})</TabsTrigger>
+          <TabsList className="bg-muted/60 p-1 rounded-xl">
+            <TabsTrigger value="ativos" className="rounded-lg">Ativos ({ativos.length})</TabsTrigger>
+            <TabsTrigger value="pendentes" className="rounded-lg">Pendentes ({pendentes.length})</TabsTrigger>
           </TabsList>
-          <TabsContent value="ativos"><Card className="overflow-hidden">{renderTable(ativos)}</Card></TabsContent>
-          <TabsContent value="pendentes"><Card className="overflow-hidden">{renderTable(pendentes, true)}</Card></TabsContent>
+          <TabsContent value="ativos" className="mt-4">
+            <SectionCard>{renderTable(ativos)}</SectionCard>
+          </TabsContent>
+          <TabsContent value="pendentes" className="mt-4">
+            <SectionCard>{renderTable(pendentes, true)}</SectionCard>
+          </TabsContent>
         </Tabs>
 
         <Dialog open={open} onOpenChange={setOpen}>
