@@ -55,7 +55,8 @@ const App = () => (
           <Route path="/meus-documentos" element={<ProtectedRoute allow={[...FUNC]}><MeusDocumentos /></ProtectedRoute>} />
 
           {/* Gestor */}
-          <Route path="/" element={<ProtectedRoute allow={[...GESTOR]}><Dashboard /></ProtectedRoute>} />
+          <Route path="/" element={<ProtectedRoute allow={[...DP]}><Empresa /></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute allow={[...GESTOR]}><Dashboard /></ProtectedRoute>} />
           <Route path="/lotes" element={<ProtectedRoute allow={[...GESTOR]}><Lotes /></ProtectedRoute>} />
           <Route path="/lotes/novo" element={<ProtectedRoute allow={[...GESTOR]}><NovoLote /></ProtectedRoute>} />
           <Route path="/lotes/:id/revisao" element={<ProtectedRoute allow={[...GESTOR]}><Revisao /></ProtectedRoute>} />
