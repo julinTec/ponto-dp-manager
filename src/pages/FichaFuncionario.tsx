@@ -29,22 +29,31 @@ export default function FichaFuncionario() {
   const [docs, setDocs] = useState<any[]>([]);
   const [entries, setEntries] = useState<any[]>([]);
   const [adjustments, setAdjustments] = useState<any[]>([]);
+  const [occurrences, setOccurrences] = useState<any[]>([]);
+  const [closures, setClosures] = useState<any[]>([]);
+  const [admissions, setAdmissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => { if (id) load(id); }, [id]);
 
   async function load(empId: string) {
     setLoading(true);
-    const [e, d, t, a] = await Promise.all([
+    const [e, d, t, a, o, c, ad] = await Promise.all([
       supabase.from("employees").select("*").eq("id", empId).single(),
       supabase.from("employee_documents").select("*").eq("employee_id", empId).order("created_at", { ascending: false }),
       supabase.from("time_entries").select("*").eq("employee_id", empId).order("data", { ascending: false }).limit(60),
       supabase.from("payroll_adjustments").select("*").eq("employee_id", empId).order("data", { ascending: false }).limit(30),
+      supabase.from("employee_occurrences").select("*").eq("employee_id", empId).order("data", { ascending: false }).limit(50),
+      supabase.from("monthly_closures").select("*").eq("employee_id", empId).order("ano", { ascending: false }).order("mes", { ascending: false }).limit(24),
+      supabase.from("employee_admissions").select("*").eq("employee_id", empId).order("created_at", { ascending: false }),
     ]);
     setEmp(e.data);
     setDocs(d.data ?? []);
     setEntries(t.data ?? []);
     setAdjustments(a.data ?? []);
+    setOccurrences(o.data ?? []);
+    setClosures(c.data ?? []);
+    setAdmissions(ad.data ?? []);
     setLoading(false);
   }
 
@@ -118,11 +127,13 @@ export default function FichaFuncionario() {
         </section>
 
         <Tabs defaultValue="cadastro">
-          <TabsList className="bg-muted/60 p-1 rounded-xl">
+          <TabsList className="bg-muted/60 p-1 rounded-xl flex-wrap h-auto">
             <TabsTrigger value="cadastro" className="rounded-lg"><IdCard className="h-3.5 w-3.5 mr-1.5" />Cadastro</TabsTrigger>
             <TabsTrigger value="documentos" className="rounded-lg"><FileText className="h-3.5 w-3.5 mr-1.5" />Documentos ({docs.length})</TabsTrigger>
             <TabsTrigger value="ponto" className="rounded-lg"><Clock className="h-3.5 w-3.5 mr-1.5" />Ponto</TabsTrigger>
-            <TabsTrigger value="ocorrencias" className="rounded-lg">Ocorrências ({adjustments.length})</TabsTrigger>
+            <TabsTrigger value="ocorrencias" className="rounded-lg">Ocorrências ({occurrences.length + adjustments.length})</TabsTrigger>
+            <TabsTrigger value="fechamentos" className="rounded-lg"><CalendarCheck2 className="h-3.5 w-3.5 mr-1.5" />Fechamentos ({closures.length})</TabsTrigger>
+            <TabsTrigger value="admissoes" className="rounded-lg"><Building2 className="h-3.5 w-3.5 mr-1.5" />Admissões ({admissions.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="cadastro" className="mt-4">
@@ -168,9 +179,21 @@ export default function FichaFuncionario() {
                           <p className="text-xs text-muted-foreground capitalize">{d.document_type}{d.document_date && ` · ${format(new Date(d.document_date), "dd/MM/yyyy")}`}</p>
                         </div>
                       </div>
-                      <span className={cn("chip capitalize", d.status === "pendente_revisao" ? "bg-warning/10 text-warning border-warning/20" : "bg-muted text-muted-foreground border-border")}>
-                        {String(d.status ?? "").replace("_", " ")}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {d.needs_review && (
+                          <span className="chip bg-warning/10 text-warning border-warning/20">
+                            <AlertTriangle className="h-3 w-3" /> Revisar
+                          </span>
+                        )}
+                        {d.confianca != null && (
+                          <span className="chip bg-muted text-muted-foreground border-border tabular-nums">
+                            {Math.round(Number(d.confianca) * 100)}%
+                          </span>
+                        )}
+                        <span className={cn("chip capitalize", d.status === "pendente_revisao" ? "bg-warning/10 text-warning border-warning/20" : "bg-muted text-muted-foreground border-border")}>
+                          {String(d.status ?? "").replace("_", " ")}
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -216,19 +239,90 @@ export default function FichaFuncionario() {
           </TabsContent>
 
           <TabsContent value="ocorrencias" className="mt-4">
-            <SectionCard title="Ocorrências e ajustes">
-              {adjustments.length === 0 ? (
-                <EmptyState icon={CalendarCheck2} title="Sem ocorrências" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <SectionCard title="Ocorrências" description={`${occurrences.length} registros`}>
+                {occurrences.length === 0 ? (
+                  <EmptyState icon={AlertTriangle} title="Sem ocorrências" />
+                ) : (
+                  <div className="divide-y divide-border/70">
+                    {occurrences.map((o) => (
+                      <div key={o.id} className="px-6 py-3.5 text-sm hover:bg-muted/30">
+                        <div className="flex items-center justify-between">
+                          <p className="font-medium text-foreground">{o.titulo}</p>
+                          <span className="chip bg-muted text-muted-foreground border-border capitalize">{String(o.tipo).replace("_", " ")}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">{o.data ? format(new Date(o.data), "dd/MM/yyyy") : ""}{o.descricao ? ` · ${o.descricao}` : ""}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </SectionCard>
+              <SectionCard title="Ajustes de folha">
+                {adjustments.length === 0 ? (
+                  <EmptyState icon={CalendarCheck2} title="Sem ajustes" />
+                ) : (
+                  <div className="divide-y divide-border/70">
+                    {adjustments.map((a) => (
+                      <div key={a.id} className="px-6 py-3.5 text-sm flex items-center justify-between hover:bg-muted/30">
+                        <div className="min-w-0">
+                          <p className="font-medium capitalize text-foreground">{String(a.tipo).replace("_", " ")}</p>
+                          <p className="text-xs text-muted-foreground">{a.data ? format(new Date(a.data), "dd/MM/yyyy") : ""}{a.notes ? ` · ${a.notes}` : ""}</p>
+                        </div>
+                        <span className="tabular-nums text-sm font-medium text-foreground">{Number(a.valor_horas ?? 0).toFixed(2)}h</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </SectionCard>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="fechamentos" className="mt-4">
+            <SectionCard title="Fechamentos mensais" description={`${closures.length} períodos`}>
+              {closures.length === 0 ? (
+                <EmptyState icon={CalendarCheck2} title="Sem fechamentos" description="Os fechamentos mensais aparecerão aqui." />
               ) : (
                 <div className="divide-y divide-border/70">
-                  {adjustments.map((a) => (
-                    <div key={a.id} className="px-6 py-3.5 text-sm flex items-center justify-between hover:bg-muted/30">
-                      <div className="min-w-0">
-                        <p className="font-medium capitalize text-foreground">{String(a.tipo).replace("_", " ")}</p>
-                        <p className="text-xs text-muted-foreground">{a.data ? format(new Date(a.data), "dd/MM/yyyy") : ""} {a.notes ? ` · ${a.notes}` : ""}</p>
+                  {closures.map((c) => {
+                    const totais = (c.totais ?? {}) as any;
+                    return (
+                      <div key={c.id} className="px-6 py-3.5 text-sm hover:bg-muted/30 flex items-center justify-between gap-4">
+                        <div className="min-w-0">
+                          <p className="font-medium text-foreground">{String(c.mes).padStart(2, "0")}/{c.ano}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {totais.worked_hours != null && `${Number(totais.worked_hours).toFixed(1)}h trabalhadas`}
+                            {totais.overtime_hours != null && ` · ${Number(totais.overtime_hours).toFixed(1)}h extras`}
+                            {totais.missing_hours != null && ` · ${Number(totais.missing_hours).toFixed(1)}h faltantes`}
+                          </p>
+                          {c.observacoes && <p className="text-xs text-muted-foreground mt-1 italic">{c.observacoes}</p>}
+                        </div>
+                        <span className={cn("chip capitalize", c.status === "fechado" ? "bg-success/10 text-success border-success/20" : "bg-warning/10 text-warning border-warning/20")}>
+                          {c.status}
+                        </span>
                       </div>
-                      <span className="tabular-nums text-sm font-medium text-foreground">{Number(a.valor_horas ?? 0).toFixed(2)}h</span>
-                    </div>
+                    );
+                  })}
+                </div>
+              )}
+            </SectionCard>
+          </TabsContent>
+
+          <TabsContent value="admissoes" className="mt-4">
+            <SectionCard title="Processos de admissão" description={`${admissions.length} registros`}>
+              {admissions.length === 0 ? (
+                <EmptyState icon={Building2} title="Sem processos de admissão" />
+              ) : (
+                <div className="divide-y divide-border/70">
+                  {admissions.map((a) => (
+                    <Link to={`/admissoes/${a.id}`} key={a.id} className="px-6 py-3.5 text-sm flex items-center justify-between hover:bg-muted/30 block">
+                      <div className="min-w-0">
+                        <p className="font-medium text-foreground">Admissão · {format(new Date(a.created_at), "dd/MM/yyyy", { locale: ptBR })}</p>
+                        {a.notes && <p className="text-xs text-muted-foreground mt-1">{a.notes}</p>}
+                      </div>
+                      <span className={cn("chip capitalize", a.status === "aprovada" ? "bg-success/10 text-success border-success/20" : a.status === "rejeitada" ? "bg-destructive/10 text-destructive border-destructive/20" : "bg-warning/10 text-warning border-warning/20")}>
+                        {String(a.status).replace("_", " ")}
+                      </span>
+                    </Link>
                   ))}
                 </div>
               )}
