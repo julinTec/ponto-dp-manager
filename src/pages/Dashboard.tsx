@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useActiveCompany } from "@/contexts/CompanyContext";
 import { useAuth } from "@/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,6 @@ import {
   FileStack, Clock, Plus, Loader2,
   Users, FileText, CalendarX, TrendingUp, AlertTriangle, UserPlus, Sparkles, Activity,
 } from "lucide-react";
-import { CompanyFilter } from "@/components/CompanyFilter";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -36,7 +36,7 @@ export default function Dashboard() {
     faltas_just: 0, faltas_injust: 0, he: 0, dsr: 0, inconsistencias: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [companyFilter, setCompanyFilter] = useState<string | null>(null);
+  const { activeCompanyId: companyFilter } = useActiveCompany();
 
   useEffect(() => {
     if (!profile?.company_id && !isSuperAdmin) return;
@@ -141,7 +141,6 @@ export default function Dashboard() {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <div className="bg-white/10 border border-white/15 rounded-xl">
-                <CompanyFilter value={companyFilter} onChange={setCompanyFilter} />
               </div>
               <Button asChild className="bg-white text-foreground hover:bg-white/90 shadow-sm">
                 <Link to="/admissoes"><Plus className="h-4 w-4 mr-2" />Nova admissão</Link>

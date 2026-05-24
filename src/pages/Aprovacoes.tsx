@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useActiveCompany } from "@/contexts/CompanyContext";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { SectionCard } from "@/components/ui-kit/SectionCard";
@@ -9,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Check, X, FileText, CheckCircle2, Paperclip } from "lucide-react";
-import { CompanyFilter } from "@/components/CompanyFilter";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -34,7 +34,7 @@ interface Row {
 
 export default function Aprovacoes() {
   const { user } = useAuth();
-  const [companyFilter, setCompanyFilter] = useState<string | null>(null);
+  const { activeCompanyId: companyFilter } = useActiveCompany();
   const [justs, setJusts] = useState<Row[]>([]);
   const [reqs, setReqs] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
@@ -150,7 +150,7 @@ export default function Aprovacoes() {
           title="Aprovações"
           subtitle="Justificativas e solicitações pendentes da equipe"
           eyebrow="Pessoas"
-          actions={<CompanyFilter value={companyFilter} onChange={setCompanyFilter} />}
+          actions={null}
         />
 
         <Tabs defaultValue="justs">

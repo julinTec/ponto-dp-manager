@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useActiveCompany } from "@/contexts/CompanyContext";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
@@ -9,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Download, FileBarChart2, Users, Clock, AlertTriangle, CalendarX, Moon, TrendingUp } from "lucide-react";
-import { CompanyFilter } from "@/components/CompanyFilter";
 import { toast } from "sonner";
 
 const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
@@ -45,7 +45,7 @@ export default function Relatorios() {
   const [loading, setLoading] = useState(false);
   const [linhas, setLinhas] = useState<Linha[]>([]);
   const [autoRan, setAutoRan] = useState(false);
-  const [companyFilter, setCompanyFilter] = useState<string | null>(null);
+  const { activeCompanyId: companyFilter } = useActiveCompany();
 
   useEffect(() => {
     (async () => {
@@ -129,7 +129,7 @@ export default function Relatorios() {
         <PageHeader
           title="Relatórios mensais"
           subtitle="Consolidado por funcionário: horas, HE, adicional noturno, faltas, DSR e inconsistências"
-          actions={<CompanyFilter value={companyFilter} onChange={setCompanyFilter} />}
+          actions={null}
         />
 
         <Card className="p-4 flex flex-col sm:flex-row gap-3 items-end flex-wrap">

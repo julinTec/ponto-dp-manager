@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useActiveCompany } from "@/contexts/CompanyContext";
 import { useAuth } from "@/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
@@ -12,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ConfidenceBadge } from "@/components/ConfidenceBadge";
 import { FileText, Loader2, Upload, X, CheckCircle2, AlertTriangle, Trash2, Download } from "lucide-react";
-import { CompanyFilter, CompanyPicker } from "@/components/CompanyFilter";
+import { CompanyPicker } from "@/components/CompanyFilter";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -67,7 +68,7 @@ export default function Documentos() {
   const [submitting, setSubmitting] = useState(false);
   const [filter, setFilter] = useState<string>("todos");
   const [editing, setEditing] = useState<Doc | null>(null);
-  const [companyFilter, setCompanyFilter] = useState<string | null>(null);
+  const { activeCompanyId: companyFilter } = useActiveCompany();
   const [createCompanyId, setCreateCompanyId] = useState<string | null>(null);
 
   useEffect(() => { load(); loadEmployees(); }, [companyFilter]);
@@ -221,7 +222,6 @@ export default function Documentos() {
                 {TIPOS.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
               </SelectContent>
             </Select>
-            <CompanyFilter value={companyFilter} onChange={setCompanyFilter} />
             <span className="text-sm text-muted-foreground">{filtered.length} documento(s)</span>
           </div>
           {canEdit && (

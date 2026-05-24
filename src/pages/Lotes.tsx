@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useActiveCompany } from "@/contexts/CompanyContext";
 import { useAuth } from "@/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
@@ -14,7 +15,6 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Plus, Search, Loader2, FileStack, FileUp, Trash2 } from "lucide-react";
-import { CompanyFilter } from "@/components/CompanyFilter";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -40,7 +40,7 @@ export default function Lotes() {
   const [statusFilter, setStatusFilter] = useState<string>("todos");
   const [confirmDel, setConfirmDel] = useState<Batch | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [companyFilter, setCompanyFilter] = useState<string | null>(null);
+  const { activeCompanyId: companyFilter } = useActiveCompany();
 
   useEffect(() => { load(); }, [companyFilter]);
 
@@ -89,7 +89,6 @@ export default function Lotes() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Buscar por nome..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
           </div>
-          <CompanyFilter value={companyFilter} onChange={setCompanyFilter} />
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="sm:w-56"><SelectValue /></SelectTrigger>
             <SelectContent>
