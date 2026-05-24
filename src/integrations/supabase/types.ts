@@ -17,45 +17,63 @@ export type Database = {
       admission_documents: {
         Row: {
           admission_id: string
+          ai_model_used: string | null
           checklist_status: Database["public"]["Enums"]["checklist_status"]
           confianca: number | null
           created_at: string
           dados_extraidos: Json
           erro: string | null
+          extraction_status: string
           id: string
           mime_type: string | null
+          needs_review: boolean
           ocr_status: Database["public"]["Enums"]["ocr_status"]
+          ocr_text: string | null
+          ocr_text_clean: string | null
           original_name: string | null
+          review_notes: string | null
           storage_path: string
           tamanho_bytes: number | null
           tipo: Database["public"]["Enums"]["admission_doc_type"]
         }
         Insert: {
           admission_id: string
+          ai_model_used?: string | null
           checklist_status?: Database["public"]["Enums"]["checklist_status"]
           confianca?: number | null
           created_at?: string
           dados_extraidos?: Json
           erro?: string | null
+          extraction_status?: string
           id?: string
           mime_type?: string | null
+          needs_review?: boolean
           ocr_status?: Database["public"]["Enums"]["ocr_status"]
+          ocr_text?: string | null
+          ocr_text_clean?: string | null
           original_name?: string | null
+          review_notes?: string | null
           storage_path: string
           tamanho_bytes?: number | null
           tipo: Database["public"]["Enums"]["admission_doc_type"]
         }
         Update: {
           admission_id?: string
+          ai_model_used?: string | null
           checklist_status?: Database["public"]["Enums"]["checklist_status"]
           confianca?: number | null
           created_at?: string
           dados_extraidos?: Json
           erro?: string | null
+          extraction_status?: string
           id?: string
           mime_type?: string | null
+          needs_review?: boolean
           ocr_status?: Database["public"]["Enums"]["ocr_status"]
+          ocr_text?: string | null
+          ocr_text_clean?: string | null
           original_name?: string | null
+          review_notes?: string | null
           storage_path?: string
           tamanho_bytes?: number | null
           tipo?: Database["public"]["Enums"]["admission_doc_type"]
@@ -148,6 +166,7 @@ export type Database = {
       employee_documents: {
         Row: {
           ai_extracted_data: Json
+          ai_model_used: string | null
           company_id: string
           confianca: number | null
           created_at: string
@@ -156,10 +175,13 @@ export type Database = {
           document_type: Database["public"]["Enums"]["employee_doc_type"]
           employee_id: string | null
           end_date: string | null
+          extraction_status: string
           id: string
           mime_type: string | null
           needs_review: boolean
           notes: string | null
+          ocr_text: string | null
+          ocr_text_clean: string | null
           original_name: string | null
           start_date: string | null
           status: Database["public"]["Enums"]["employee_doc_status"]
@@ -169,6 +191,7 @@ export type Database = {
         }
         Insert: {
           ai_extracted_data?: Json
+          ai_model_used?: string | null
           company_id: string
           confianca?: number | null
           created_at?: string
@@ -177,10 +200,13 @@ export type Database = {
           document_type: Database["public"]["Enums"]["employee_doc_type"]
           employee_id?: string | null
           end_date?: string | null
+          extraction_status?: string
           id?: string
           mime_type?: string | null
           needs_review?: boolean
           notes?: string | null
+          ocr_text?: string | null
+          ocr_text_clean?: string | null
           original_name?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["employee_doc_status"]
@@ -190,6 +216,7 @@ export type Database = {
         }
         Update: {
           ai_extracted_data?: Json
+          ai_model_used?: string | null
           company_id?: string
           confianca?: number | null
           created_at?: string
@@ -198,10 +225,13 @@ export type Database = {
           document_type?: Database["public"]["Enums"]["employee_doc_type"]
           employee_id?: string | null
           end_date?: string | null
+          extraction_status?: string
           id?: string
           mime_type?: string | null
           needs_review?: boolean
           notes?: string | null
+          ocr_text?: string | null
+          ocr_text_clean?: string | null
           original_name?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["employee_doc_status"]
@@ -1034,6 +1064,13 @@ export type Database = {
         | "contrato"
         | "exame_admissional"
         | "outro"
+        | "cnh"
+        | "certidao_nascimento"
+        | "certidao_casamento"
+        | "certificado_escolar"
+        | "titulo_eleitor"
+        | "pis_pasep"
+        | "reservista"
       admission_status: "em_analise" | "aprovado" | "rejeitado"
       app_role:
         | "super_admin"
@@ -1061,6 +1098,20 @@ export type Database = {
         | "aviso_previo"
         | "rescisao"
         | "comprovante_pagamento"
+        | "rg"
+        | "cpf"
+        | "cnh"
+        | "ctps"
+        | "comprovante_residencia"
+        | "certidao_nascimento"
+        | "certidao_casamento"
+        | "certificado_escolar"
+        | "titulo_eleitor"
+        | "pis_pasep"
+        | "reservista"
+        | "contrato"
+        | "exame_admissional"
+        | "ficha"
       employee_status: "ativo" | "pendente_validacao" | "inativo"
       entry_status: "ok" | "inconsistente" | "falta" | "folga" | "feriado"
       justification_type:
@@ -1217,6 +1268,13 @@ export const Constants = {
         "contrato",
         "exame_admissional",
         "outro",
+        "cnh",
+        "certidao_nascimento",
+        "certidao_casamento",
+        "certificado_escolar",
+        "titulo_eleitor",
+        "pis_pasep",
+        "reservista",
       ],
       admission_status: ["em_analise", "aprovado", "rejeitado"],
       app_role: [
@@ -1247,6 +1305,20 @@ export const Constants = {
         "aviso_previo",
         "rescisao",
         "comprovante_pagamento",
+        "rg",
+        "cpf",
+        "cnh",
+        "ctps",
+        "comprovante_residencia",
+        "certidao_nascimento",
+        "certidao_casamento",
+        "certificado_escolar",
+        "titulo_eleitor",
+        "pis_pasep",
+        "reservista",
+        "contrato",
+        "exame_admissional",
+        "ficha",
       ],
       employee_status: ["ativo", "pendente_validacao", "inativo"],
       entry_status: ["ok", "inconsistente", "falta", "folga", "feriado"],
