@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useActiveCompany } from "@/contexts/CompanyContext";
 import { useAuth } from "@/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
@@ -11,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Plus, Loader2, Users as UsersIcon, CheckCircle2, Trash2, Pencil } from "lucide-react";
-import { CompanyFilter, CompanyPicker } from "@/components/CompanyFilter";
+import { CompanyPicker } from "@/components/CompanyFilter";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -34,7 +35,7 @@ export default function Funcionarios() {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Employee | null>(null);
-  const [companyFilter, setCompanyFilter] = useState<string | null>(null);
+  const { activeCompanyId: companyFilter } = useActiveCompany();
   const [createCompanyId, setCreateCompanyId] = useState<string | null>(null);
 
   useEffect(() => { load(); }, [companyFilter]);
@@ -169,7 +170,6 @@ export default function Funcionarios() {
           subtitle="Cadastro e validação de funcionários"
           actions={
             <div className="flex items-center gap-2">
-              <CompanyFilter value={companyFilter} onChange={setCompanyFilter} />
               {canEdit && (
                 <Button onClick={() => { setEditing(null); setCreateCompanyId(null); setOpen(true); }} className="bg-gradient-primary shadow-sm hover:opacity-95">
                   <Plus className="h-4 w-4 mr-2" />Novo funcionário

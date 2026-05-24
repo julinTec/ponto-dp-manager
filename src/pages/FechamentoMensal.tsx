@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useActiveCompany } from "@/contexts/CompanyContext";
 import { useAuth } from "@/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
@@ -10,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { CompanyFilter } from "@/components/CompanyFilter";
 import { Loader2, CalendarCheck2, Lock, Unlock, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -24,7 +24,7 @@ export default function FechamentoMensal() {
   const now = new Date();
   const [ano, setAno] = useState(now.getFullYear());
   const [mes, setMes] = useState(now.getMonth() + 1);
-  const [companyFilter, setCompanyFilter] = useState<string | null>(null);
+  const { activeCompanyId: companyFilter } = useActiveCompany();
   const [employees, setEmployees] = useState<any[]>([]);
   const [closures, setClosures] = useState<Record<string, any>>({});
   const [selectedEmp, setSelectedEmp] = useState<string | null>(params.get("employee"));
@@ -112,7 +112,7 @@ export default function FechamentoMensal() {
           title="Fechamento mensal"
           subtitle="Consolidação de horas, faltas e ocorrências por funcionário"
           eyebrow="Ponto"
-          actions={<CompanyFilter value={companyFilter} onChange={setCompanyFilter} />}
+          actions={null}
         />
 
         <SectionCard>
