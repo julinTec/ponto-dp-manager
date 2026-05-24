@@ -127,11 +127,13 @@ export default function FichaFuncionario() {
         </section>
 
         <Tabs defaultValue="cadastro">
-          <TabsList className="bg-muted/60 p-1 rounded-xl">
+          <TabsList className="bg-muted/60 p-1 rounded-xl flex-wrap h-auto">
             <TabsTrigger value="cadastro" className="rounded-lg"><IdCard className="h-3.5 w-3.5 mr-1.5" />Cadastro</TabsTrigger>
             <TabsTrigger value="documentos" className="rounded-lg"><FileText className="h-3.5 w-3.5 mr-1.5" />Documentos ({docs.length})</TabsTrigger>
             <TabsTrigger value="ponto" className="rounded-lg"><Clock className="h-3.5 w-3.5 mr-1.5" />Ponto</TabsTrigger>
-            <TabsTrigger value="ocorrencias" className="rounded-lg">Ocorrências ({adjustments.length})</TabsTrigger>
+            <TabsTrigger value="ocorrencias" className="rounded-lg">Ocorrências ({occurrences.length + adjustments.length})</TabsTrigger>
+            <TabsTrigger value="fechamentos" className="rounded-lg"><CalendarCheck2 className="h-3.5 w-3.5 mr-1.5" />Fechamentos ({closures.length})</TabsTrigger>
+            <TabsTrigger value="admissoes" className="rounded-lg"><Building2 className="h-3.5 w-3.5 mr-1.5" />Admissões ({admissions.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="cadastro" className="mt-4">
