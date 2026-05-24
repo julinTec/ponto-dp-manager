@@ -997,13 +997,22 @@ export type Database = {
       }
       get_employee_id: { Args: { _user_id: string }; Returns: string }
       get_user_company: { Args: { _user_id: string }; Returns: string }
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
+      has_role:
+        | {
+            Args: {
+              _role: Database["public"]["Enums"]["app_role"]
+              _user_id: string
+            }
+            Returns: boolean
+          }
+        | {
+            Args: {
+              _company_id: string
+              _role: Database["public"]["Enums"]["app_role"]
+              _user_id: string
+            }
+            Returns: boolean
+          }
       is_company_member: {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
