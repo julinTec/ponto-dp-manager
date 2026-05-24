@@ -76,6 +76,7 @@ const App = () => (
           <Route path="/ai-test" element={<AiTest />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </CompanyProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
