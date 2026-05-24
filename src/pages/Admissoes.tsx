@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveCompany } from "@/contexts/CompanyContext";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { SectionCard } from "@/components/ui-kit/SectionCard";
@@ -11,18 +12,26 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, UserPlus, FileText, Loader2, Upload, X, Sparkles } from "lucide-react";
-import { CompanyFilter, CompanyPicker } from "@/components/CompanyFilter";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { ocrDocument } from "@/lib/ocr/tesseractClient";
+import { cleanOcrText } from "@/lib/ocr/textCleaner";
 
 const TIPOS = [
   { value: "ficha", label: "Ficha de admissão" },
   { value: "rg", label: "RG" },
   { value: "cpf", label: "CPF" },
-  { value: "comprovante_residencia", label: "Comp. residência" },
+  { value: "cnh", label: "CNH" },
   { value: "ctps", label: "CTPS" },
+  { value: "comprovante_residencia", label: "Comp. residência" },
+  { value: "certidao_nascimento", label: "Cert. nascimento" },
+  { value: "certidao_casamento", label: "Cert. casamento" },
+  { value: "certificado_escolar", label: "Cert. escolar" },
+  { value: "titulo_eleitor", label: "Título de eleitor" },
+  { value: "pis_pasep", label: "PIS/PASEP" },
+  { value: "reservista", label: "Reservista" },
   { value: "contrato", label: "Contrato" },
   { value: "exame_admissional", label: "Exame admissional" },
   { value: "outro", label: "Outro" },
@@ -38,6 +47,7 @@ interface Admission {
 
 export default function Admissoes() {
   const { profile, isAdmin, isSuperAdmin } = useAuth();
+  const { activeCompanyId } = useActiveCompany();
   const canEdit = isAdmin || isSuperAdmin;
   const navigate = useNavigate();
   const [list, setList] = useState<Admission[]>([]);
@@ -45,16 +55,18 @@ export default function Admissoes() {
   const [open, setOpen] = useState(false);
   const [files, setFiles] = useState<{ file: File; tipo: string }[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const [companyFilter, setCompanyFilter] = useState<string | null>(null);
-  const [createCompanyId, setCreateCompanyId] = useState<string | null>(null);
+  const [progress, setProgress] = useState<string>("");
 
-  useEffect(() => { load(); }, [companyFilter]);
+  useEffect(() => { if (activeCompanyId) load(); }, [activeCompanyId]);
 
   async function load() {
+    if (!activeCompanyId) return;
     setLoading(true);
-    let q = supabase.from("employee_admissions").select("*").order("created_at", { ascending: false });
-    if (companyFilter) q = q.eq("company_id", companyFilter);
-    const { data } = await q;
+    const { data } = await supabase
+      .from("employee_admissions")
+      .select("*")
+      .eq("company_id", activeCompanyId)
+      .order("created_at", { ascending: false });
     setList((data ?? []) as Admission[]);
     setLoading(false);
   }
@@ -66,8 +78,8 @@ export default function Admissoes() {
   }
 
   async function criar() {
-    const company_id = isSuperAdmin ? createCompanyId : profile?.company_id;
-    if (!company_id) return toast.error("Selecione a empresa");
+    const company_id = activeCompanyId;
+    if (!company_id) return toast.error("Selecione a empresa no topo");
     if (files.length === 0) return toast.error("Adicione ao menos um documento");
     setSubmitting(true);
     try {
@@ -77,10 +89,14 @@ export default function Admissoes() {
         .select().single();
       if (error) throw error;
 
-      for (const item of files) {
-        const path = `${company_id}/admissions/${adm.id}/${crypto.randomUUID()}-${item.file.name}`;
+      for (let idx = 0; idx < files.length; idx++) {
+        const item = files[idx];
+        setProgress(`Enviando ${idx + 1}/${files.length}: ${item.file.name}`);
+
+        const path = `${company_id}/admissoes/${adm.id}/${item.tipo}/${crypto.randomUUID()}-${item.file.name}`;
         const { error: upErr } = await supabase.storage.from("employee-docs").upload(path, item.file, { contentType: item.file.type });
         if (upErr) throw upErr;
+
         const { data: docRow, error: insErr } = await supabase.from("admission_documents").insert({
           admission_id: adm.id,
           tipo: item.tipo as any,
@@ -88,22 +104,46 @@ export default function Admissoes() {
           original_name: item.file.name,
           mime_type: item.file.type,
           tamanho_bytes: item.file.size,
+          extraction_status: "processando",
+          ocr_status: "processando",
         }).select().single();
         if (insErr) throw insErr;
-        // PDF -> OpenAI (admission-pdf-extract); imagem -> Gemini (ocr-admission-doc)
-        const fn = item.file.type === "application/pdf" ? "admission-pdf-extract" : "ocr-admission-doc";
-        supabase.functions.invoke(fn, { body: { admission_document_id: docRow.id } }).catch(console.error);
+
+        // Nível 1: OCR no browser → texto → edge function
+        setProgress(`Lendo ${idx + 1}/${files.length}: ${item.file.name}…`);
+        try {
+          const ocr = await ocrDocument(item.file);
+          const cleaned = cleanOcrText(ocr.text);
+          await supabase.functions.invoke("admission-ocr-extract", {
+            body: {
+              admission_document_id: docRow.id,
+              ocr_text: ocr.text,
+              ocr_text_clean: cleaned,
+              ocr_confidence: ocr.confidence,
+            },
+          });
+        } catch (ocrErr: any) {
+          console.error("OCR falhou:", ocrErr);
+          await supabase.from("admission_documents").update({
+            ocr_status: "falhou",
+            extraction_status: "falhou",
+            needs_review: true,
+            erro: ocrErr?.message ?? "OCR no navegador falhou",
+          }).eq("id", docRow.id);
+        }
       }
 
-      toast.success("Admissão criada. OCR em andamento.");
+      toast.success("Admissão criada. Documentos sendo analisados.");
       setOpen(false);
       setFiles([]);
+      setProgress("");
       load();
       navigate(`/admissoes/${adm.id}`);
     } catch (e: any) {
       toast.error(e.message ?? "Erro ao criar admissão");
     } finally {
       setSubmitting(false);
+      setProgress("");
     }
   }
 
@@ -117,17 +157,14 @@ export default function Admissoes() {
       <div className="p-6 sm:p-8 max-w-7xl mx-auto space-y-6">
         <PageHeader
           title="Admissão de funcionários"
-          subtitle="Envio de documentos com leitura automática por IA"
+          subtitle="Envio de documentos com OCR local + IA econômica (gpt-4o-mini)"
           eyebrow="Pessoas"
           actions={
-            <div className="flex items-center gap-2">
-              <CompanyFilter value={companyFilter} onChange={setCompanyFilter} />
-              {canEdit && (
-                <Button onClick={() => { setCreateCompanyId(null); setOpen(true); }} className="bg-gradient-primary shadow-sm hover:opacity-95">
-                  <Plus className="h-4 w-4 mr-2" />Nova admissão
-                </Button>
-              )}
-            </div>
+            canEdit && (
+              <Button onClick={() => setOpen(true)} className="bg-gradient-primary shadow-sm hover:opacity-95">
+                <Plus className="h-4 w-4 mr-2" />Nova admissão
+              </Button>
+            )
           }
         />
 
@@ -141,8 +178,8 @@ export default function Admissoes() {
             <EmptyState
               icon={UserPlus}
               title="Nenhuma admissão em andamento"
-              description="Inicie uma nova admissão enviando os documentos do candidato. A IA extrai os dados automaticamente."
-              action={canEdit ? <Button onClick={() => { setCreateCompanyId(null); setOpen(true); }} className="bg-gradient-primary"><Plus className="h-4 w-4 mr-2" />Nova admissão</Button> : null}
+              description="Inicie uma nova admissão enviando os documentos do candidato. O OCR roda local e a IA estrutura os dados."
+              action={canEdit ? <Button onClick={() => setOpen(true)} className="bg-gradient-primary"><Plus className="h-4 w-4 mr-2" />Nova admissão</Button> : null}
             />
           ) : (
             <div className="divide-y divide-border/70">
@@ -179,12 +216,6 @@ export default function Admissoes() {
           <DialogContent className="max-w-2xl">
             <DialogHeader><DialogTitle>Nova admissão</DialogTitle></DialogHeader>
             <div className="space-y-4">
-              {isSuperAdmin && (
-                <div className="space-y-2">
-                  <Label>Empresa</Label>
-                  <CompanyPicker value={createCompanyId} onChange={setCreateCompanyId} />
-                </div>
-              )}
               <Label>Documentos do candidato</Label>
               <label
                 htmlFor="adm-files"
@@ -219,9 +250,14 @@ export default function Admissoes() {
                   ))}
                 </div>
               )}
+              {progress && (
+                <div className="text-xs text-muted-foreground flex items-center gap-2">
+                  <Loader2 className="h-3 w-3 animate-spin" /> {progress}
+                </div>
+              )}
             </div>
             <DialogFooter>
-              <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
+              <Button variant="ghost" onClick={() => setOpen(false)} disabled={submitting}>Cancelar</Button>
               <Button onClick={criar} disabled={submitting} className="bg-gradient-primary">
                 {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Criar admissão
