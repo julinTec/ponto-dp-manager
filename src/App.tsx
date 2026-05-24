@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { CompanyProvider } from "@/contexts/CompanyContext";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Lotes from "./pages/Lotes";
@@ -42,6 +43,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <CompanyProvider>
         <Routes>
           <Route path="/auth" element={<Auth />} />
 
