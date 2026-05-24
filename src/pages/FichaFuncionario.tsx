@@ -227,19 +227,90 @@ export default function FichaFuncionario() {
           </TabsContent>
 
           <TabsContent value="ocorrencias" className="mt-4">
-            <SectionCard title="Ocorrências e ajustes">
-              {adjustments.length === 0 ? (
-                <EmptyState icon={CalendarCheck2} title="Sem ocorrências" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <SectionCard title="Ocorrências" description={`${occurrences.length} registros`}>
+                {occurrences.length === 0 ? (
+                  <EmptyState icon={AlertTriangle} title="Sem ocorrências" />
+                ) : (
+                  <div className="divide-y divide-border/70">
+                    {occurrences.map((o) => (
+                      <div key={o.id} className="px-6 py-3.5 text-sm hover:bg-muted/30">
+                        <div className="flex items-center justify-between">
+                          <p className="font-medium text-foreground">{o.titulo}</p>
+                          <span className="chip bg-muted text-muted-foreground border-border capitalize">{String(o.tipo).replace("_", " ")}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">{o.data ? format(new Date(o.data), "dd/MM/yyyy") : ""}{o.descricao ? ` · ${o.descricao}` : ""}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </SectionCard>
+              <SectionCard title="Ajustes de folha">
+                {adjustments.length === 0 ? (
+                  <EmptyState icon={CalendarCheck2} title="Sem ajustes" />
+                ) : (
+                  <div className="divide-y divide-border/70">
+                    {adjustments.map((a) => (
+                      <div key={a.id} className="px-6 py-3.5 text-sm flex items-center justify-between hover:bg-muted/30">
+                        <div className="min-w-0">
+                          <p className="font-medium capitalize text-foreground">{String(a.tipo).replace("_", " ")}</p>
+                          <p className="text-xs text-muted-foreground">{a.data ? format(new Date(a.data), "dd/MM/yyyy") : ""}{a.notes ? ` · ${a.notes}` : ""}</p>
+                        </div>
+                        <span className="tabular-nums text-sm font-medium text-foreground">{Number(a.valor_horas ?? 0).toFixed(2)}h</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </SectionCard>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="fechamentos" className="mt-4">
+            <SectionCard title="Fechamentos mensais" description={`${closures.length} períodos`}>
+              {closures.length === 0 ? (
+                <EmptyState icon={CalendarCheck2} title="Sem fechamentos" description="Os fechamentos mensais aparecerão aqui." />
               ) : (
                 <div className="divide-y divide-border/70">
-                  {adjustments.map((a) => (
-                    <div key={a.id} className="px-6 py-3.5 text-sm flex items-center justify-between hover:bg-muted/30">
-                      <div className="min-w-0">
-                        <p className="font-medium capitalize text-foreground">{String(a.tipo).replace("_", " ")}</p>
-                        <p className="text-xs text-muted-foreground">{a.data ? format(new Date(a.data), "dd/MM/yyyy") : ""} {a.notes ? ` · ${a.notes}` : ""}</p>
+                  {closures.map((c) => {
+                    const totais = (c.totais ?? {}) as any;
+                    return (
+                      <div key={c.id} className="px-6 py-3.5 text-sm hover:bg-muted/30 flex items-center justify-between gap-4">
+                        <div className="min-w-0">
+                          <p className="font-medium text-foreground">{String(c.mes).padStart(2, "0")}/{c.ano}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {totais.worked_hours != null && `${Number(totais.worked_hours).toFixed(1)}h trabalhadas`}
+                            {totais.overtime_hours != null && ` · ${Number(totais.overtime_hours).toFixed(1)}h extras`}
+                            {totais.missing_hours != null && ` · ${Number(totais.missing_hours).toFixed(1)}h faltantes`}
+                          </p>
+                          {c.observacoes && <p className="text-xs text-muted-foreground mt-1 italic">{c.observacoes}</p>}
+                        </div>
+                        <span className={cn("chip capitalize", c.status === "fechado" ? "bg-success/10 text-success border-success/20" : "bg-warning/10 text-warning border-warning/20")}>
+                          {c.status}
+                        </span>
                       </div>
-                      <span className="tabular-nums text-sm font-medium text-foreground">{Number(a.valor_horas ?? 0).toFixed(2)}h</span>
-                    </div>
+                    );
+                  })}
+                </div>
+              )}
+            </SectionCard>
+          </TabsContent>
+
+          <TabsContent value="admissoes" className="mt-4">
+            <SectionCard title="Processos de admissão" description={`${admissions.length} registros`}>
+              {admissions.length === 0 ? (
+                <EmptyState icon={Building2} title="Sem processos de admissão" />
+              ) : (
+                <div className="divide-y divide-border/70">
+                  {admissions.map((a) => (
+                    <Link to={`/admissoes/${a.id}`} key={a.id} className="px-6 py-3.5 text-sm flex items-center justify-between hover:bg-muted/30 block">
+                      <div className="min-w-0">
+                        <p className="font-medium text-foreground">Admissão · {format(new Date(a.created_at), "dd/MM/yyyy", { locale: ptBR })}</p>
+                        {a.notes && <p className="text-xs text-muted-foreground mt-1">{a.notes}</p>}
+                      </div>
+                      <span className={cn("chip capitalize", a.status === "aprovada" ? "bg-success/10 text-success border-success/20" : a.status === "rejeitada" ? "bg-destructive/10 text-destructive border-destructive/20" : "bg-warning/10 text-warning border-warning/20")}>
+                        {String(a.status).replace("_", " ")}
+                      </span>
+                    </Link>
                   ))}
                 </div>
               )}
