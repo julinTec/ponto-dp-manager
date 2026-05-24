@@ -24,8 +24,11 @@ const TONE_DOC: Record<string, string> = {
   em_analise: "bg-info/15 text-info border-info/30",
 };
 const TIPO_LABEL: Record<string, string> = {
-  ficha: "Ficha", rg: "RG", cpf: "CPF", comprovante_residencia: "Comp. residência",
-  ctps: "CTPS", contrato: "Contrato", exame_admissional: "Exame admissional", outro: "Outro",
+  ficha: "Ficha", rg: "RG", cpf: "CPF", cnh: "CNH", ctps: "CTPS",
+  comprovante_residencia: "Comp. residência", certidao_nascimento: "Cert. nascimento",
+  certidao_casamento: "Cert. casamento", certificado_escolar: "Cert. escolar",
+  titulo_eleitor: "Título eleitor", pis_pasep: "PIS/PASEP", reservista: "Reservista",
+  contrato: "Contrato", exame_admissional: "Exame admissional", outro: "Outro",
 };
 
 export default function AdmissaoDetalhe() {
@@ -99,39 +102,29 @@ export default function AdmissaoDetalhe() {
 
   async function aprovar() {
     if (!form.nome) return toast.error("Nome obrigatório");
-    if (!profile?.company_id) return;
+    if (!form.cpf) return toast.error("CPF obrigatório");
     setSaving(true);
     try {
-      const empPayload: any = {
-        company_id: admission.company_id,
+      const complementos = {
         nome: form.nome,
-        cpf: form.cpf || null,
-        rg: form.rg || null,
-        data_nascimento: form.data_nascimento || null,
-        endereco: form.endereco || null,
-        telefone: form.telefone || null,
-        email: form.email || null,
+        cpf: form.cpf,
         cargo: form.cargo || null,
         funcao: form.cargo || null,
         admission_date: form.admission_date || null,
         salario: form.salario ? parseFloat(form.salario) : null,
         jornada_padrao_horas: form.jornada_padrao_horas ? parseFloat(form.jornada_padrao_horas) : 8,
-        work_schedule_type: form.work_schedule_type || null,
-        status: "ativo",
       };
-
-      let employeeId = admission.employee_id;
-      if (employeeId) {
-        await supabase.from("employees").update(empPayload).eq("id", employeeId);
-      } else {
-        const { data: e, error: eErr } = await supabase.from("employees").insert(empPayload).select().single();
-        if (eErr) throw eErr;
-        employeeId = e.id;
-      }
+      // salva form completo nos dados_extraidos antes da edge processar
       await supabase.from("employee_admissions")
-        .update({ status: "aprovado", employee_id: employeeId, dados_extraidos: { ...admission.dados_extraidos, ...form } })
+        .update({ dados_extraidos: { ...admission.dados_extraidos, ...form } })
         .eq("id", id!);
-      toast.success("Admissão aprovada e funcionário cadastrado");
+
+      const { data, error } = await supabase.functions.invoke("admission-approve", {
+        body: { admission_id: id, complementos },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success("Admissão aprovada e funcionário criado");
       navigate("/funcionarios");
     } catch (e: any) {
       toast.error(e.message ?? "Erro ao aprovar admissão");

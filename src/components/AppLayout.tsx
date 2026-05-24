@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { signOut, useAuth } from "@/hooks/useAuth";
 import { ReactNode, useState } from "react";
 import fluxorLogo from "@/assets/fluxor-logo.png";
+import { CompanySwitcher } from "@/components/CompanySwitcher";
 
 type NavItem = { to: string; label: string; icon: any };
 
@@ -222,6 +223,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </div>
           <div className="flex-1 md:hidden" />
           <div className="flex items-center gap-2">
+            <CompanySwitcher />
             <Button variant="ghost" size="icon" className="h-9 w-9 relative">
               <Bell className="h-4 w-4" />
             </Button>
