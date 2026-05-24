@@ -179,9 +179,21 @@ export default function FichaFuncionario() {
                           <p className="text-xs text-muted-foreground capitalize">{d.document_type}{d.document_date && ` · ${format(new Date(d.document_date), "dd/MM/yyyy")}`}</p>
                         </div>
                       </div>
-                      <span className={cn("chip capitalize", d.status === "pendente_revisao" ? "bg-warning/10 text-warning border-warning/20" : "bg-muted text-muted-foreground border-border")}>
-                        {String(d.status ?? "").replace("_", " ")}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {d.needs_review && (
+                          <span className="chip bg-warning/10 text-warning border-warning/20">
+                            <AlertTriangle className="h-3 w-3" /> Revisar
+                          </span>
+                        )}
+                        {d.confianca != null && (
+                          <span className="chip bg-muted text-muted-foreground border-border tabular-nums">
+                            {Math.round(Number(d.confianca) * 100)}%
+                          </span>
+                        )}
+                        <span className={cn("chip capitalize", d.status === "pendente_revisao" ? "bg-warning/10 text-warning border-warning/20" : "bg-muted text-muted-foreground border-border")}>
+                          {String(d.status ?? "").replace("_", " ")}
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>
