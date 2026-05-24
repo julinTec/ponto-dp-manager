@@ -16,13 +16,16 @@ type NavItem = { to: string; label: string; icon: any };
 const SECTIONS: { title: string; items: NavItem[] }[] = [
   {
     title: "Visão geral",
-    items: [{ to: "/", label: "Dashboard", icon: LayoutDashboard }],
+    items: [
+      { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { to: "/", label: "Empresa / Configurações", icon: Building2 },
+    ],
   },
   {
     title: "Pessoas",
     items: [
-      { to: "/funcionarios", label: "Funcionários", icon: Users },
       { to: "/admissoes", label: "Admissões", icon: UserPlus },
+      { to: "/funcionarios", label: "Funcionários", icon: Users },
       { to: "/documentos", label: "Documentos", icon: FileText },
       { to: "/aprovacoes", label: "Aprovações", icon: Inbox },
     ],
@@ -34,10 +37,6 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
       { to: "/fechamento", label: "Fechamento mensal", icon: CalendarCheck2 },
       { to: "/relatorios", label: "Relatórios", icon: FileBarChart2 },
     ],
-  },
-  {
-    title: "Empresa",
-    items: [{ to: "/gestor/empresa", label: "Configurações", icon: Building2 }],
   },
 ];
 
