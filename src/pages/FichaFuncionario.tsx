@@ -29,22 +29,31 @@ export default function FichaFuncionario() {
   const [docs, setDocs] = useState<any[]>([]);
   const [entries, setEntries] = useState<any[]>([]);
   const [adjustments, setAdjustments] = useState<any[]>([]);
+  const [occurrences, setOccurrences] = useState<any[]>([]);
+  const [closures, setClosures] = useState<any[]>([]);
+  const [admissions, setAdmissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => { if (id) load(id); }, [id]);
 
   async function load(empId: string) {
     setLoading(true);
-    const [e, d, t, a] = await Promise.all([
+    const [e, d, t, a, o, c, ad] = await Promise.all([
       supabase.from("employees").select("*").eq("id", empId).single(),
       supabase.from("employee_documents").select("*").eq("employee_id", empId).order("created_at", { ascending: false }),
       supabase.from("time_entries").select("*").eq("employee_id", empId).order("data", { ascending: false }).limit(60),
       supabase.from("payroll_adjustments").select("*").eq("employee_id", empId).order("data", { ascending: false }).limit(30),
+      supabase.from("employee_occurrences").select("*").eq("employee_id", empId).order("data", { ascending: false }).limit(50),
+      supabase.from("monthly_closures").select("*").eq("employee_id", empId).order("ano", { ascending: false }).order("mes", { ascending: false }).limit(24),
+      supabase.from("employee_admissions").select("*").eq("employee_id", empId).order("created_at", { ascending: false }),
     ]);
     setEmp(e.data);
     setDocs(d.data ?? []);
     setEntries(t.data ?? []);
     setAdjustments(a.data ?? []);
+    setOccurrences(o.data ?? []);
+    setClosures(c.data ?? []);
+    setAdmissions(ad.data ?? []);
     setLoading(false);
   }
 
