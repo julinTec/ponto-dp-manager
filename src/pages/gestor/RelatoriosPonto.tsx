@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
@@ -10,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { listarPontosEmpresa } from "@/services/punch";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Download } from "lucide-react";
+import { Loader2, Download, FileUp } from "lucide-react";
 
 const LABEL: Record<string, string> = {
   entrada: "Entrada",
@@ -81,7 +82,18 @@ export default function RelatoriosPonto() {
 
   return (
     <AppLayout>
-      <PageHeader title="Relatórios de ponto" subtitle="Registros de batida de ponto por geolocalização" />
+      <PageHeader 
+        title="Relatórios de ponto" 
+        subtitle="Registros de batida de ponto por geolocalização" 
+        actions={
+          <Button asChild className="bg-gradient-primary shadow-sm">
+            <Link to="/lotes/novo">
+              <FileUp className="h-4 w-4 mr-2" />
+              Subir Folhas de Ponto
+            </Link>
+          </Button>
+        }
+      />
       <div className="p-6 space-y-4">
         <Card className="p-4">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">

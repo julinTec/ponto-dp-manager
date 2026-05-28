@@ -2,7 +2,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, FileBarChart2, Shield, LogOut, Clock,
   UserCog, UserPlus, FileText, Building2, MapPin, CalendarCheck2, Inbox,
-  Search, Bell, Menu, X, ChevronsLeft,
+  Search, Bell, Menu, X, ChevronsLeft, FileStack
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,7 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
     title: "Ponto",
     items: [
       { to: "/gestor/relatorios-ponto", label: "Gestão de ponto", icon: MapPin },
+      { to: "/lotes", label: "Lotes de folhas", icon: FileStack },
       { to: "/fechamento", label: "Fechamento mensal", icon: CalendarCheck2 },
       { to: "/relatorios", label: "Relatórios", icon: FileBarChart2 },
     ],
