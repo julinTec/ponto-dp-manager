@@ -8,10 +8,10 @@ import { PageHeader } from "@/components/PageHeader";
 import { SectionCard } from "@/components/ui-kit/SectionCard";
 import { EmptyState } from "@/components/ui-kit/EmptyState";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, UserPlus, FileText, Loader2, Upload, X, Sparkles } from "lucide-react";
+import { Plus, UserPlus, FileText, Loader2, Upload, X, Sparkles, Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -53,6 +53,7 @@ export default function Admissoes() {
   const [list, setList] = useState<Admission[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [files, setFiles] = useState<{ file: File; tipo: string }[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [progress, setProgress] = useState<string>("");
@@ -147,6 +148,19 @@ export default function Admissoes() {
     }
   }
 
+  async function excluir() {
+    if (!deleteId) return;
+    try {
+      const { error } = await supabase.from("employee_admissions").delete().eq("id", deleteId);
+      if (error) throw error;
+      toast.success("Admissão excluída com sucesso");
+      setDeleteId(null);
+      load();
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao excluir admissão");
+    }
+  }
+
   const statusTone = (s: string) =>
     s === "aprovado" ? "bg-success/10 text-success border-success/20"
     : s === "rejeitado" ? "bg-destructive/10 text-destructive border-destructive/20"
@@ -184,29 +198,47 @@ export default function Admissoes() {
           ) : (
             <div className="divide-y divide-border/70">
               {list.map((a) => (
-                <Link key={a.id} to={`/admissoes/${a.id}`} className="flex items-center justify-between px-6 py-4 hover:bg-muted/40 transition-colors">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="h-11 w-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                      <FileText className="h-5 w-5" />
+                <div key={a.id} className="group relative flex items-center justify-between hover:bg-muted/40 transition-colors">
+                  <Link to={`/admissoes/${a.id}`} className="flex-1 flex items-center justify-between px-6 py-4 min-w-0">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-11 w-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                        <FileText className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-foreground truncate flex items-center gap-2">
+                          {a.dados_extraidos?.nome ?? "Aguardando leitura…"}
+                          {!a.dados_extraidos?.nome && (
+                            <span className="chip bg-info/10 text-info border-info/20"><Sparkles className="h-3 w-3" /> IA processando</span>
+                          )}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {format(new Date(a.created_at), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
+                          {a.dados_extraidos?.cargo && ` · ${a.dados_extraidos.cargo}`}
+                        </p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="font-medium text-foreground truncate flex items-center gap-2">
-                        {a.dados_extraidos?.nome ?? "Aguardando leitura…"}
-                        {!a.dados_extraidos?.nome && (
-                          <span className="chip bg-info/10 text-info border-info/20"><Sparkles className="h-3 w-3" /> IA processando</span>
-                        )}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {format(new Date(a.created_at), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
-                        {a.dados_extraidos?.cargo && ` · ${a.dados_extraidos.cargo}`}
-                      </p>
+                    <span className={cn("chip", statusTone(a.status))}>
+                      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                      {STATUS_LABEL[a.status] ?? a.status}
+                    </span>
+                  </Link>
+                  {canEdit && (
+                    <div className="pr-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setDeleteId(a.id);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                  </div>
-                  <span className={cn("chip", statusTone(a.status))}>
-                    <span className="h-1.5 w-1.5 rounded-full bg-current" />
-                    {STATUS_LABEL[a.status] ?? a.status}
-                  </span>
-                </Link>
+                  )}
+                </div>
               ))}
             </div>
           )}
@@ -262,6 +294,24 @@ export default function Admissoes() {
                 {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Criar admissão
               </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!deleteId} onOpenChange={(v) => !v && setDeleteId(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+                Excluir admissão
+              </DialogTitle>
+              <DialogDescription>
+                Tem certeza que deseja excluir esta admissão? Todos os documentos e dados extraídos serão removidos permanentemente. Esta ação não pode ser desfeita.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteId(null)}>Cancelar</Button>
+              <Button variant="destructive" onClick={excluir}>Confirmar exclusão</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
