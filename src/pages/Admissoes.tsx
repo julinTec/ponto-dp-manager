@@ -148,6 +148,19 @@ export default function Admissoes() {
     }
   }
 
+  async function excluir() {
+    if (!deleteId) return;
+    try {
+      const { error } = await supabase.from("employee_admissions").delete().eq("id", deleteId);
+      if (error) throw error;
+      toast.success("Admissão excluída com sucesso");
+      setDeleteId(null);
+      load();
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao excluir admissão");
+    }
+  }
+
   const statusTone = (s: string) =>
     s === "aprovado" ? "bg-success/10 text-success border-success/20"
     : s === "rejeitado" ? "bg-destructive/10 text-destructive border-destructive/20"
@@ -281,6 +294,24 @@ export default function Admissoes() {
                 {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Criar admissão
               </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!deleteId} onOpenChange={(v) => !v && setDeleteId(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+                Excluir admissão
+              </DialogTitle>
+              <DialogDescription>
+                Tem certeza que deseja excluir esta admissão? Todos os documentos e dados extraídos serão removidos permanentemente. Esta ação não pode ser desfeita.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteId(null)}>Cancelar</Button>
+              <Button variant="destructive" onClick={excluir}>Confirmar exclusão</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
