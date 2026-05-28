@@ -13,6 +13,7 @@ import { CompanySwitcher } from "@/components/CompanySwitcher";
 
 type NavItem = { to: string; label: string; icon: any };
 
+// Definição das seções de navegação do menu lateral
 const SECTIONS: { title: string; items: NavItem[] }[] = [
   {
     title: "Visão geral",
