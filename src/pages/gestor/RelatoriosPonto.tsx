@@ -87,7 +87,7 @@ export default function RelatoriosPonto() {
         subtitle="Registros de batida de ponto por geolocalização" 
         actions={
           <Button asChild className="bg-gradient-primary shadow-sm">
-            <Link to="/lotes/novo">
+            <Link to="/lotes">
               <FileUp className="h-4 w-4 mr-2" />
               Subir Folhas de Ponto
             </Link>
